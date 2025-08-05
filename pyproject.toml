@@ -17,7 +17,7 @@ dependencies = [
   "rich==13.9.4",
   "sh==2.1.0",
   "types-pytz==2025.2.0.20250516",
-  { git = "https://github.com/PawelPlesniak/daqpytools", rev = "develop" },
+  "daqpytools @ https://github.com/PawelPlesniak/daqpytools@develop",
 ]
 
 [tool.setuptools]
