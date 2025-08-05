@@ -8,6 +8,16 @@ name = "daqpyutils"
 readme = "docs/README.md"
 requires-python = ">=3.10"
 version = "0.1.0"
+dependencies = [
+  "click==8.1.7",
+  "GitPython==3.1.44",
+  "kafka-python==2.0.2",
+  "pytz==2024.2",
+  "Jinja2==3.1.4",
+  "rich==13.9.4",
+  "sh==2.1.0",
+  "types-pytz==2025.2.0.20250516",
+]
 
 [tool.setuptools]
 package-dir = { "" = "src" }
@@ -20,7 +30,7 @@ dev = [
   "black",
   "pytest-cov",
   "pytest-mypy",
-  "taplo"
+  "taplo",
 ]
 test = ["pytest", "pytest-mypy", "pytest-cov"]
 
@@ -31,24 +41,25 @@ line-length = 88
 ignore = ["D205", "D100", "D104"]
 pydocstyle.convention = "google"
 select = [
-    "D",
-    "E",
-    "F",
-    "I",
-    "UP",
-    "RUF","ANN",
-    "S",
-    "N",
-    "ERA",
-    "B",
-    "C4",
-    "A",
-    "RET",
-    "T20",
-    "ISC",
-    "G",
-    "TRY",
-    "T"
+  "D",
+  "E",
+  "F",
+  "I",
+  "UP",
+  "RUF",
+  "ANN",
+  "S",
+  "N",
+  "ERA",
+  "B",
+  "C4",
+  "A",
+  "RET",
+  "T20",
+  "ISC",
+  "G",
+  "TRY",
+  "T",
 ]
 
 [tool.ruff.lint.per-file-ignores]
