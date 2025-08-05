@@ -1,0 +1,40 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff
+        name: Ruff Linter
+        entry: ruff check --fix --exit-non-zero-on-fix
+        language: system
+        types: [python]
+
+      - id: black
+        name: Black Formatter
+        entry: black --check
+        language: system
+        types: [python]
+
+      - id: pytest
+        name: Run tests with pytest
+        entry: pytest -v tests/ --tb=short --disable-warnings
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: pytest-mypy
+        name: Type check with pytest-mypy
+        entry: pytest --mypy
+        language: system
+        types: [python]
+
+      - id: pytest-doctest
+        name: Run doctests with pytest
+        entry: pytest --doctest-modules --ignore=docs/
+        language: system
+        types: [python]
+
+      - id: taplo-fmt
+        name: Format TOML files with Taplo
+        entry: taplo fmt --check
+        language: system
+        types: [toml]
+        pass_filenames: true

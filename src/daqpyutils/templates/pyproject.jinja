@@ -1,0 +1,99 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 61.0"]
+
+[project]
+{%- if DEPENDENCIES -%}
+dependencies = [
+  {{ DEPENDENCIES }}
+]
+{%- endif %}
+description = "{{ DESCRIPTION }}"
+name = "{{ PACKAGE_NAME }}"
+readme = "docs/README.md"
+requires-python = ">=3.10"
+version = "0.1.0"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[project.optional-dependencies]
+dev = [
+  "ruff",
+  "pre-commit",
+  "pytest",
+  "black",
+  "pytest-cov",
+  "pytest-mypy",
+  "taplo"
+]
+test = ["pytest", "pytest-mypy", "pytest-cov"]
+
+{%- if APPLICATIONS -%}
+{{ APPLICATIONS }}
+{%- endif %}
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+ignore = ["D205", "D100", "D104"]
+pydocstyle.convention = "google"
+select = [
+    "D",
+    "E",
+    "F",
+    "I",
+    "UP",
+    "RUF",
+
+{%- if STRICT -%}
+    "ANN",
+    "S",
+    "N",
+    "ERA",
+    "B",
+    "C4",
+    "A",
+    "RET",
+    "T20",
+    "ISC",
+    "G",
+    "TRY",
+    "T"
+{%- else -%}
+    "ANN"
+{%- endif %}
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D100", "D103", "D104", "S101", "ANN201"]
+
+{%- if RUFF_EXCLUDE -%}
+{{ RUFF_EXCLUDE }}
+{%- endif %}
+
+[tool.black]
+force-exclude = '''
+/(
+    \.git
+  | \.github
+  | \.ruff_cache
+)/
+
+'''
+line-length = 88
+skip-magic-trailing-comma = true
+target-version = ["py310", "py311", "py312", "py313"]
+
+[tool.mypy]
+ignore_missing_imports = true
+mypy_path = "src"
+
+[tool.pytest.ini_options]
+addopts = "-v --mypy -p no:warnings --cov=. --cov-report=html --doctest-modules --ignore=docs/ --ignore=src/daqpytools/apps/"
+norecursedirs = [".git", ".github", "venv"]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+omit = ["tests/*"]
