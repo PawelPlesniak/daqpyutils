@@ -55,7 +55,7 @@ def unpack_items(
 
 
 def validate_names(package_name: str, applications: list[str]) -> None:
-    """Validate the package name."""
+    """Validate the package names."""
     if package_name == ".":
         log.error(
             "You passed '.' as the name of the package. Perhaps you meant to use the "
