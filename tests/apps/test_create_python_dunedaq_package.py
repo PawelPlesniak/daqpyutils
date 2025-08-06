@@ -27,7 +27,7 @@ from daqpyutils.apps.__main_create_python_dunedaq_package__ import (
 
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*m")
 runner = CliRunner()
-test_package_name = "test_package"
+test_package_name = "testPackage"
 
 
 def strip_ansi(text: str) -> str:
@@ -100,6 +100,8 @@ def test_validate_names() -> None:
     validate_names(test_package_name, ["app1", "app2"])
     with pytest.raises(SystemExit):
         validate_names(".", ["app1", "app2"])
+    with pytest.raises(SystemExit):
+        validate_names("test_package", ["app1", "app2"])
     with pytest.raises(SystemExit):
         validate_names(test_package_name, ["app1", "app2", "invalid-app-name!"])
     with pytest.raises(SystemExit):
@@ -266,7 +268,6 @@ def test_construct_default_pyproject_toml() -> None:
             content = pyproject_file.read()
             assert "setuptools" in content
             assert "[project]" in content
-            assert 'name = "test_package"' in content
+            assert f'name = "{test_package_name}"' in content
             assert 'description = "Test Package"' in content
     # TODO - Add tests for other generated files
-    # Migrate back to setuptools to see if the version number can be kept separately

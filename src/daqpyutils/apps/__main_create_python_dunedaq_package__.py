@@ -62,11 +62,11 @@ def validate_names(package_name: str, applications: list[str]) -> None:
             "tool validate_python_dunedaq_package_structure?"
         )
         sys.exit(1)
-    if not re.fullmatch(r"[a-z][a-z0-9_]*", package_name):
+    if not re.fullmatch(r"[a-zA-Z][a-zA-Z0-9]*", package_name):
         log.error(
             "The package name [red]%s[/red] doesn't satisfy the requirement that the "
-            "package begin with a lowercase letter and consist only of lowercase "
-            "letters, numbers, and underscores.",
+            "package begin with a lowercase letter and consist only of letters and "
+            "numbers.",
             package_name,
         )
         sys.exit(1)
