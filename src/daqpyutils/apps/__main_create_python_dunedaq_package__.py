@@ -6,11 +6,11 @@ from pathlib import Path
 from typing import Any
 
 import click
+from daqpytools.logging.levels import log_level_to_int, logging_log_level_keys
+from daqpytools.logging.logger import get_daq_logger
 from git import Repo
 from jinja2 import Template
 
-from daqpytools.logging.levels import log_level_to_int, logging_log_level_keys
-from daqpytools.logging.logger import get_daq_logger
 from daqpyutils.repository_handling.defaults import default_subdirs
 
 template_path = Path(__file__).parent.parent / "templates"
