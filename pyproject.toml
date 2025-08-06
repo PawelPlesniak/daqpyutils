@@ -38,6 +38,10 @@ dev = [
 ]
 test = ["pytest", "pytest-mypy", "pytest-cov"]
 
+[project.scripts]
+daqpytools-logging-demonstrator = "daqpytools.apps.__main_logging_demonstrator__:main"
+create-python-dunedaq-package = "daqpyutils.apps.__main_create_python_dunedaq_package__:main"
+
 [tool.ruff]
 line-length = 88
 
