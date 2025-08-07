@@ -7,14 +7,13 @@ import pytest
 from _pytest.logging import LogCaptureFixture
 from click.testing import CliRunner, Result
 
-from daqpython.apps.__main_create_python_dunedaq_package__ import (
+from daqpyutils.apps.__main_create_python_dunedaq_package__ import (
     construct_application_file,
-    construct_default_github_workflows,
+    construct_default_dot_github,
     construct_default_gitignore,
     construct_default_pre_commit_config_yaml,
     construct_default_pyproject_toml,
     construct_default_readme_md,
-    construct_default_version_py,
     copy_template,
     format_requirements,
     make_subdirs,
@@ -22,13 +21,13 @@ from daqpython.apps.__main_create_python_dunedaq_package__ import (
     unpack_items,
     validate_names,
 )
-from daqpython.apps.__main_create_python_dunedaq_package__ import (
+from daqpyutils.apps.__main_create_python_dunedaq_package__ import (
     main as create_python_dunedaq_package,
 )
 
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*m")
 runner = CliRunner()
-test_package_name = "test_package"
+test_package_name = "testPackage"
 
 
 def strip_ansi(text: str) -> str:
@@ -102,6 +101,8 @@ def test_validate_names() -> None:
     with pytest.raises(SystemExit):
         validate_names(".", ["app1", "app2"])
     with pytest.raises(SystemExit):
+        validate_names("test_package", ["app1", "app2"])
+    with pytest.raises(SystemExit):
         validate_names(test_package_name, ["app1", "app2", "invalid-app-name!"])
     with pytest.raises(SystemExit):
         validate_names(test_package_name, ["app1", "app2", "123invalid_start"])
@@ -119,8 +120,8 @@ def test_make_subdirs() -> None:
 def test_copy_template() -> None:
     """Test that copy_template copies the template files to the target directory."""
     with tempfile.TemporaryDirectory() as tempdir:
-        copy_template("version.jinja", Path(tempdir) / "version.py")
-        assert (Path(tempdir) / "version.py").exists()
+        copy_template("gitignore.jinja", Path(tempdir) / ".gitignore")
+        assert (Path(tempdir) / ".gitignore").exists()
 
 
 def test_construct_default_readme_md() -> None:
@@ -151,15 +152,25 @@ def test_construct_default_gitignore() -> None:
             assert "__pycache__" in content
 
 
-def test_construct_default_github_workflows() -> None:
-    """Test that construct_default_github_workflows creates the expected workflows."""
+def test_construct_default_dot_github() -> None:
+    """Test that construct_default_dot_github creates the expected workflows."""
     with tempfile.TemporaryDirectory() as tempdir:
         package_path = Path(tempdir) / test_package_name
         os.makedirs(package_path, exist_ok=True)
-        construct_default_github_workflows(package_path)
-        workflows_path = package_path / ".github" / "workflows"
+        construct_default_dot_github(package_path)
+        workflows_path = package_path / ".github"
         assert workflows_path.exists()
-        for workflow_file in ["lint.yml", "dependabot.yml"]:
+        for workflow_file in ["pull_request_template.md", "dependabot.yml"]:
+            assert (workflows_path / workflow_file).exists()
+        workflows_path = workflows_path / "workflows"
+        assert workflows_path.exists()
+        for workflow_file in [
+            "check_links.yml",
+            "lint.yml",
+            "test.yml",
+            "track_new_issues.yml",
+            "track_new_prs.yml",
+        ]:
             assert (workflows_path / workflow_file).exists()
 
 
@@ -179,20 +190,6 @@ def test_construct_default_pre_commit_config_yaml() -> None:
             assert "ruff" in content
             assert "black" in content
             assert "pytest" in content
-
-
-def test_construct_default_version_py() -> None:
-    """Test that construct_default_version_py creates a valid version.py file."""
-    with tempfile.TemporaryDirectory() as tempdir:
-        package_path = Path(tempdir) / test_package_name
-        os.makedirs(package_path, exist_ok=True)
-        construct_default_version_py(package_path)
-        version_path = package_path / "version.py"
-        assert version_path.exists()
-        with open(version_path) as version_file:
-            content = version_file.read()
-            assert "__version__" in content
-            assert "0.0.0" in content  # Default version
 
 
 def test_construct_application_file() -> None:
@@ -269,8 +266,8 @@ def test_construct_default_pyproject_toml() -> None:
         assert pyproject_path.exists()
         with open(pyproject_path) as pyproject_file:
             content = pyproject_file.read()
-            assert '["hatchling"]' in content
-            assert 'name = "test_package"' in content
+            assert "setuptools" in content
+            assert "[project]" in content
+            assert f'name = "{test_package_name}"' in content
             assert 'description = "Test Package"' in content
     # TODO - Add tests for other generated files
-    # Migrate back to setuptools to see if the version number can be kept separately
