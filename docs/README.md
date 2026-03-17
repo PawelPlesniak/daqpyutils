@@ -1,6 +1,7 @@
 [![codecov](https://codecov.io/gh/PawelPlesniak/daqpyutils/graph/badge.svg?token=45O5BUOH3V)](https://codecov.io/gh/PawelPlesniak/daqpyutils)
 
 [Initial plans](https://docs.google.com/document/d/1i1CPLn7UYLbrUMF2IiQNtejUSnskyRpIolfuG46PweY/edit?tab=t.0#heading=h.8u53ddxujd8q)
+[Some slides from earlier](https://docs.google.com/presentation/d/1ttWGPtHcKsvJKeQOs3cHswES_xHRoXyYYxjmtbHYGT4/edit?slide=id.p#slide=id.p)
 
 # daqpyutils
 Package for python tools, includes:
