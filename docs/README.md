@@ -1,4 +1,7 @@
 [![codecov](https://codecov.io/gh/PawelPlesniak/daqpyutils/graph/badge.svg?token=45O5BUOH3V)](https://codecov.io/gh/PawelPlesniak/daqpyutils)
+
+[Initial plans](https://docs.google.com/document/d/1i1CPLn7UYLbrUMF2IiQNtejUSnskyRpIolfuG46PweY/edit?tab=t.0#heading=h.8u53ddxujd8q)
+
 # daqpyutils
 Package for python tools, includes:
  - Package handling and creation
