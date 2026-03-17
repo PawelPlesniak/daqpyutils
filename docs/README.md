@@ -8,7 +8,7 @@
 
 [There are too many slides](https://docs.google.com/presentation/d/1L9yofnW52rHQCHCo0Wo1ZjJhhWegAXlxs1FH4d5BG30/edit?slide=id.p#slide=id.p)
 
-
+"Parallel to daq-cmake in python"
 
 # daqpyutils
 Package for python tools, includes:
