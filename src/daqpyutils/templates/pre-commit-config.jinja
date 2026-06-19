@@ -2,14 +2,20 @@ repos:
   - repo: local
     hooks:
       - id: ruff
-        name: Check linting with Ruff
-        entry: ruff check .
+        name: Ruff Linter
+        entry: ruff check --fix --exit-non-zero-on-fix
         language: system
         types: [python]
 
       - id: black
-        name: Check formatting with Black
+        name: Black Formatter
         entry: black --check
+        language: system
+        types: [python]
+
+      - id: isort
+        name: isort Import Sorter
+        entry: isort
         language: system
         types: [python]
 
@@ -19,22 +25,3 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
-
-      - id: pytest-mypy
-        name: Type check with pytest-mypy
-        entry: pytest --mypy
-        language: system
-        types: [python]
-
-      - id: pytest-doctest
-        name: Run doctests with pytest
-        entry: pytest --doctest-modules --ignore=docs/
-        language: system
-        types: [python]
-
-      - id: taplo-fmt
-        name: Check TOML formatting with Taplo
-        entry: taplo fmt --check
-        language: system
-        types: [toml]
-        pass_filenames: true

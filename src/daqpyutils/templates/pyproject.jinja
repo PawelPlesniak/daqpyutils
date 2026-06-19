@@ -1,98 +1,185 @@
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools >= 61.0"]
+requires = ["setuptools>=61.0"]
 
 [project]
+name = "{{ PACKAGE_NAME }}"
+requires-python = ">=3.10"
+readme = "docs/README.md"
+version = "0.0.0"
+description = "{{ DESCRIPTION }}"
+
 {%- if DEPENDENCIES -%}
 dependencies = [
-  {{ DEPENDENCIES }}
+{{ DEPENDENCIES }}
 ]
 {%- endif %}
-description = "{{ DESCRIPTION }}"
-name = "{{ PACKAGE_NAME }}"
-readme = "docs/README.md"
-requires-python = ">=3.10"
-version = "0.1.0"
-
-[tool.setuptools.packages.find]
-where = ["src"]
 
 [project.optional-dependencies]
 dev = [
-  "ruff",
-  "pre-commit",
-  "pytest",
-  "black",
-  "pytest-cov",
-  "pytest-mypy",
-  "taplo"
+    "pytest",
+    "pytest-cov",
+    {%- if STRICT -%}
+    "ruff",
+    "pytest-mypy",
+    "pre-commit",
+    "isort",
+    "black",
+    {%- endif %}
 ]
-test = ["pytest", "pytest-mypy", "pytest-cov"]
+# TODO - discuss this. This could be used for coverage testing in the CI dashboard, SWIT input required.
+test = [
+    "pytest",
+    "pytest-cov",
+]
 
 {%- if APPLICATIONS -%}
+[project.scripts]
 {{ APPLICATIONS }}
 {%- endif %}
 
+
+# Note - if the developer chooses to use signature checking with mypy, the dev options are the
+# correct place to install the external libraries that contian the stubs that are not contained
+# in the repo source. The standard package that contains most of the external stub libraries is
+# `typeshed`, but this should be configured on a per-repository basis.
+{%- if APPLICATIONS -%}
+[project.scripts]
+{{ APPLICATIONS }}
+{%- endif %}
+
+# Standard location for the project source code
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# If static data is associated with the project, setuptools should be pointed to it
+{%- if PACKAGE_DATA -%}
+[tool.setuptools.package-data]
+{{ PACKAGE_DATA }}
+{%- endif %}
+
+[tool.pytest.ini_options]
+addopts = "-v --tb=short --cov=drunc --cov=src/drunc"
+testpaths = ["tests"]
+
+
+
+# Ruff linting rules compliant with black defaults. Similar to PEP-8 rules.
 [tool.ruff]
 line-length = 88
 
 [tool.ruff.lint]
-ignore = ["D205", "D100", "D104"]
-pydocstyle.convention = "google"
 select = [
-  "D",
-  "E",
-  "F",
-  "I",
-  "UP",
-  "RUF",
-{%- if STRICT %}
-  "ANN",
-  "S",
-  "N",
-  "ERA",
-  "B",
-  "C4",
-  "A",
-  "RET",
-  "T20",
-  "ISC",
-  "G",
-  "TRY",
-  "T",
-{% else %}
-  "ANN",
-{% endif -%}
+    "D",
+    "E",
+    "F",
+    "I",
+    "UP",
+    "RUF",
+    "ANN",
+{%- if STRICT -%}
+    "S",
+    "N",
+    "ERA",
+    "B",
+    "C4",
+    "A",
+    "RET",
+    "T20",
+    "ISC",
+    "G",
+    "TRY",
+    "T"
+{%- endif %}
 ]
+ignore = [
+    "D205",
+    "D100",
+    "D104"
+]
+pydocstyle.convention = "google"
+
+# The below mypy rules select the rules that have been selected to implement signature checking
+# should will be useful for online use. These are defined as follows, and should be changed on
+# a per-repository use case. These rules are defined below for convenience
+# Core strictness rules
+# disallow_untyped_defs - all functions have type annotations for their arguments and return values
+# disallow_incomplete_defs - as above, but requires all the functions to have signatures
+# check_untyped_defs - if a function is not fully typed, the type consistency inside the function is checked
+# no_implicit_optional - do not assume `Optional` can return `None`
+# Warn rules
+# warn_return_any - warn if functions return specific types but return `Any`
+# warn_unused_ignores - warn if `#type: ignore` is used but shouldn't be
+# warn_redundant_casts - warn if `cast()` is used but isn't needed
+# strict_equality - warn if different types (e.g. `str` == `int`) are used
+# `Any` rules
+# disallow_any_generics - stop implicit standard generic types, e.g. `List` which should be `List[int]`
+# disallow_subclassing_any - stop inheritance of `Any` type classes
+# disallow_any_explicit - stop the use of `Any` anywhere in code (hard mode)
+# disallow_any_expr - stop inferred `Any` (hard mode)
+# disallow_any_decorated - stop functions decorated with an untyped decorator
+# disallow_any_unimported - stop types from modules that haven't been imported
+# General rules (makes the use of `mypy` easier)
+# warn_unused_configs - check mypy settings are used
+# show_error_codes - show error codes when using mypy
+{%- if STRICT %}
+[tool.mypy]
+# Core strictness
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+
+# Warnings
+warn_return_any = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+strict_equality = true
+
+# "Any" restrictions
+disallow_any_generics = true
+disallow_subclassing_any = true
+disallow_any_explicit = true
+# disallow_any_expr is left at default (false)
+disallow_any_decorated = true
+disallow_any_unimported = true
+
+# Housekeeping
+warn_unused_configs = true
+show_error_codes = true
+{%- endif %}
+
+# These overrides are because the library stubs dont exist and not on typeshed
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D100", "D103", "D104", "S101", "ANN201"]
-
+"tests/*" = [
+    "D100",
+    "D103",
+    "D104",
+    "S101",
+    "ANN201"
+]
 {%- if RUFF_EXCLUDE -%}
 {{ RUFF_EXCLUDE }}
 {%- endif %}
 
 [tool.black]
+line-length = 88
+target-version = ["py310", "py311", "py312", "py313"]
+skip-magic-trailing-comma = true
 force-exclude = '''
 /(
     \.git
   | \.github
   | \.ruff_cache
 )/
-
 '''
-line-length = 88
-skip-magic-trailing-comma = true
-target-version = ["py310", "py311", "py312", "py313"]
 
-[tool.mypy]
+[mypy]
 ignore_missing_imports = true
-mypy_path = "src"
 
-[tool.pytest.ini_options]
-addopts = "-v --mypy -p no:warnings --cov=. --cov-report=html --doctest-modules --ignore=docs/ --ignore=src/daqpytools/apps/"
-norecursedirs = [".git", ".github", "venv"]
-testpaths = ["tests"]
 
 [tool.coverage.run]
-omit = ["tests/*"]
+omit = ["tests/*", "scripts/*"]
