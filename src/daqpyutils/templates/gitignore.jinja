@@ -1,20 +1,121 @@
-# Byte-compiled / optimized / DLL files
+#####################################################################################
+# The following are standard excludes for DUNE DAQ packages from git
+# versioning. Any additional excludes for your particular package,
+# please put them above this comment at the top of this file
+#####################################################################################
+
+# Emacs
+*~
+\#*
+
+# moo-generated files
+Nljs.hpp
+Structs.hpp
+
+# Backups
+*.bkp
+*.bak
+*.backup
+*.sav
+
+# Mac
+.DS_Store
+
+# Python-related
+.pytest_cache
 __pycache__/
 *.py[cod]
 *$py.class
 
-# C extensions
+# clang-format files (taken from readoutlibs' .gitignore)
+.clang-format
+.clang-format.previous
+
+# JCF, Aug-7-2025: avoid obviously binary (and potentially large) files
+*.bin
+*.hdf5
+
+
+# JCF, Aug-7-2025: the content between the #-bars below is taken from
+# appfwk's .gitignore, but edited - e.g., Makefile has been
+# dropped from the CMake section as it's legitimately version
+# controlled in places in our codebase
+
+######################################################################
+
+
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
 *.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# CMake
+CMakeLists.txt.*
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
+
+######################################################################
+
+
+
+# JCF, Aug-7-2025: everything between the #-bars below is taken from
+# what was originally integrationtest's 2021-vintage .gitignore but is
+# also used in connectivity-server and daqpython, e.g.
+
+# Removals:
+# build/ has been removed as this is used in hdf5libs
+# dist/ has been removed since it's in nanorc
+# lib/ thanks to oksutils
+# .vscode/ thanks to fdreadoutlibs
+# *.spec thanks to timing
+# .pytest_cache - already dealt with earlier in this file
+
+# Also removed a couple of package specific stuff that relates to
+# packages we don't and likely never will use - Celery, SageMath...
+
+######################################################################
 
 # Distribution / packaging
 .Python
-build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -26,13 +127,12 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-.vscode
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
-*.spec
+
 
 # Installer logs
 pip-log.txt
@@ -50,7 +150,6 @@ coverage.xml
 *.cover
 *.py,cover
 .hypothesis/
-.pytest_cache/
 
 # Translations
 *.mo
@@ -95,13 +194,6 @@ ipython_config.py
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow
 __pypackages__/
 
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
 # Environments
 .env
 .venv
@@ -129,16 +221,4 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# MacOS files
-.DS_Store
-
-# Logfiles
-log*.txt
-
-# Data files
-.nfs*
-info.*.json
-
-# Temporary files
-*~
-*.#*
+######################################################################

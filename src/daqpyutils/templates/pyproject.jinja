@@ -1,98 +1,114 @@
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools >= 61.0"]
+requires = ["setuptools>=61.0"]
 
 [project]
-{%- if DEPENDENCIES -%}
-dependencies = [
-  {{ DEPENDENCIES }}
-]
-{%- endif %}
-description = "{{ DESCRIPTION }}"
 name = "{{ PACKAGE_NAME }}"
+description = "{{ DESCRIPTION }}"
+version = "0.1.0"
 readme = "docs/README.md"
 requires-python = ">=3.10"
-version = "0.1.0"
+{%- if DEPENDENCIES %}
+dependencies = [
+{{ DEPENDENCIES }}
+]
+{%- endif %}
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "pytest-cov",
+  "ruff",
+  "pre-commit",
+  {% if STRICT -%}
+  "pytest-mypy",
+  {%- endif %}
+]
+# TODO - discuss this. This could be used for coverage testing in the CI dashboard, SWIT input required.
+test = [
+  "pytest",
+  "pytest-cov",
+  {% if STRICT -%}
+  "pytest-mypy",
+  {%- endif %}
+]
+
+{% if APPLICATIONS -%}
+[project.scripts]
+{{ APPLICATIONS }}
+{%- endif %}
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
-[project.optional-dependencies]
-dev = [
-  "ruff",
-  "pre-commit",
-  "pytest",
-  "black",
-  "pytest-cov",
-  "pytest-mypy",
-  "taplo"
-]
-test = ["pytest", "pytest-mypy", "pytest-cov"]
+{% if PACKAGE_DATA -%}
+[project.setuptools.package-data]
+{{ PACKAGE_DATA }}
+{%- endif -%}
 
-{%- if APPLICATIONS -%}
-{{ APPLICATIONS }}
-{%- endif %}
+[tool.pytest.ini_options]
+addopts = "-v{% if STRICT %} --mypy{% endif %} --cov={{ PACKAGE_NAME }} --cov-report=html --doctest-modules --ignore=docs/"
+norecursedirs = [".git", ".github", "venv"]
+testpaths = ["tests"]
 
+[tool.coverage.run]
+source = [ "{{ PACKAGE_NAME }}" ]
+omit = ["tests/*"]
+
+{% if STRICT -%}
 [tool.ruff]
 line-length = 88
+{%- endif -%}
 
 [tool.ruff.lint]
 ignore = ["D205", "D100", "D104"]
 pydocstyle.convention = "google"
 select = [
-  "D",
-  "E",
-  "F",
-  "I",
-  "UP",
-  "RUF",
+  "D",     # pydocstyle: check for docstring conventions
+  "E",     # pycodestyle errors: standard PEP 8 errors
+  "F",     # Pyflakes: check for common programming errors
+  "I",     # isort: best practices for import order and sorting
+  "UP",    # pyupgrade: suggestions for code modernization
+  "RUF",   # Ruff-specific rules: built-in Ruff-specific warnings
+  "ANN",   # flake8-annotations: check for missing type annotations
 {%- if STRICT %}
-  "ANN",
-  "S",
-  "N",
-  "ERA",
-  "B",
-  "C4",
-  "A",
-  "RET",
-  "T20",
-  "ISC",
-  "G",
-  "TRY",
-  "T",
-{% else %}
-  "ANN",
+  "S",     # flake8-bandit: check for common security issues
+  "N",     # pep8-naming: check for PEP 8 naming conventions
+  "ERA",   # eradicate: find and remove commented-out code
+  "B",     # flake8-bugbear: find likely bugs and design problems
+  "C4",    # flake8-comprehensions: improve list/dict/set comprehensions
+  "A",     # flake8-builtins: check for shadowing of Python built-in symbols
+  "RET",   # flake8-return: check for unnecessary return statements
+  "ISC",   # flake8-implicit-str-concat: detect implicit string concatenation
+  "G",     # flake8-logging-format: ensure proper logging format strings
+  "TRY",   # tryceratops: prevent abuse of try/except blocks
+  "T",     # flake8-debugger: catch tracepoints or debugger calls
 {% endif -%}
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D100", "D103", "D104", "S101", "ANN201"]
 
-{%- if RUFF_EXCLUDE -%}
-{{ RUFF_EXCLUDE }}
-{%- endif %}
-
-[tool.black]
-force-exclude = '''
-/(
-    \.git
-  | \.github
-  | \.ruff_cache
-)/
-
-'''
-line-length = 88
-skip-magic-trailing-comma = true
-target-version = ["py310", "py311", "py312", "py313"]
-
+{%- if STRICT %}
 [tool.mypy]
-ignore_missing_imports = true
 mypy_path = "src"
 
-[tool.pytest.ini_options]
-addopts = "-v --mypy -p no:warnings --cov=. --cov-report=html --doctest-modules --ignore=docs/ --ignore=src/daqpytools/apps/"
-norecursedirs = [".git", ".github", "venv"]
-testpaths = ["tests"]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_return_any = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+strict_equality = true
+disallow_any_generics = true
+disallow_subclassing_any = true
 
-[tool.coverage.run]
-omit = ["tests/*"]
+disallow_any_explicit = true
+disallow_any_expr = false
+disallow_any_decorated = true
+disallow_any_unimported = true
+
+warn_unused_configs = true
+show_error_codes = true
+{% endif -%}
