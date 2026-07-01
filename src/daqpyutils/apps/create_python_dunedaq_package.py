@@ -3,6 +3,7 @@ import shutil
 import sys
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+import requests
 from typing import Any
 
 import click
@@ -31,7 +32,7 @@ def validate_package(package_name: str) -> bool:
     Raises:
         SystemExit: If the package is not found locally or on PyPI.
     """
-    # 1. Check local environment first (fast)
+    # Check local environment
     try:
         version(package_name)
         log.debug("Package '%s' found in local environment.", package_name)
@@ -39,18 +40,236 @@ def validate_package(package_name: str) -> bool:
     except PackageNotFoundError:
         log.debug("Package '%s' not found locally, checking PyPI...", package_name)
 
-    # 2. Check PyPI (slower, requires network)
+    # Check PyPI
     try:
         url = f"https://pypi.org/pypi/{package_name}/json"
-        response = requests.get(url, timeout=5)
+        response = requests.get(url, timeout=1)
         if response.status_code == 200:
             log.info("Package '%s' exists on PyPI.", package_name)
             return True
+    except requests.exceptions.ConnectionError:
+        log.error("Request to PyPI timed out while checking for package '%s' - is your web proxy off?", package_name)
+        sys.exit(1)
     except requests.RequestException as e:
-        log.exception("Requested package %s was not found in either the virtual environment or in PyPI, exiting.%s", package_name, e)
+        log.exception(e)
+        log.error("Requested package %s was not found in either the virtual environment or in PyPI, exiting.", package_name)
         sys.exit(1)
 
+def item_is_formatted_with_version(item: str) -> bool:
+    """
+    Determine if the given item is formatted with a version number.
+
+    Assumes that package names consist of alphanumeric characters, underscores, and
+    hyphens, and either zero or two equals signs. If a single equals sign is used, this
+    script determines that this item is a a project script specifier.
+
+    >>> item_is_formatted_with_version("package_name==1.0.0")
+    True
+    >>> item_is_formatted_with_version("package_name")
+    False
+    >>> item_is_formatted_with_version("package_name=1.0.0")
+    False
+
+    Args:
+        item: The item to check.
+
+    Returns:
+        bool: True if the item is formatted with a version number, False otherwise.
+
+    Raises:
+        None
+    """
+    return bool(re.match(r"^[a-zA-Z0-9_-]+==\d+\.\d+\.\d+$", item))
+
+def item_is_formatted_in_kebab_case(item: str) -> bool:
+    """
+    Determine if the given item is defined in kebab-case.
+
+    Assumes that application names consist of lowercase alphanumeric characters and
+    hyphens, and do not contain underscores or equals signs.
+
+    >>> item_is_formatted_in_kebab_case("application-name")
+    True
+    >>> item_is_formatted_in_kebab_case("application_name")
+    False
+    >>> item_is_formatted_in_kebab_case("ApplicationName")
+    False
+
+    Args:
+        item: The item to check.
+
+    Returns:
+        bool: True if the item is defined in kebab-case, False otherwise.
+
+    Raises:
+        None
+    """
+    return bool(re.match(r"^[a-z0-9]+(-[a-z0-9]+)*$", item))
+
+def item_is_package_name(item: str) -> bool:
+    """
+    Determine if the given item is a package name following the default conventions.
+
+    Assumes that package names consist of alphanumeric characters, underscores, and
+    hyphens, and either zero or two equals signs. If a single equals sign is used, this
+    script determines that this item is a a project script specifier.
+
+    >>> item_is_package_name("package-name==1.0.0")
+    True
+    >>> item_is_package_name("package-name")
+    True
+    >>> item_is_package_name("package-name=1.0.0")
+    False
+    >>> item_is_package_name("package_name")
+    False
+
+    Args:
+        item: The item to check.
+
+    Returns:
+        bool: True if the item is a package name, False if it is a project script.
+
+    Raises:
+        None
+    """
+
+    package_name = item.split("==")[0] if "==" in item else item
+
+    if item_is_formatted_with_version(item):
+        return True
+    elif "=" in item:
+        return False
+    elif not item_is_formatted_in_kebab_case(package_name):
+        return True
+    return False
+
+def item_is_application_name(item: str) -> bool:
+    """
+    Determine if the given item is a package name or a project script.
+
+    Assumes that package names consist of alphanumeric characters, underscores, and
+    hyphens, and either zero or two equals signs. If a single equals sign is used, this
+    script determines that this item is a a project script specifier.
+
+    >>> item_is_package_name("package_name==1.0.0")
+    True
+    >>> item_is_package_name("package_name")
+    True
+    >>> item_is_package_name("package_name=1.0.0")
+    False
+
+    Args:
+        item: The item to check.
+
+    Returns:
+        bool: True if the item is a package name, False if it is a project script.
+
+    Raises:
+        None
+    """
+
+    if item_is_formatted_in_kebab_case(item):
+        return True
+    return False
+
+def validate_item_format_against_type(item: str, item_type: str) -> None:
+    """
+    Validate the given item based on its type.
+
+    >>> validate_item_format_against_type("package_name==1.0.0", "requirements")
+    None
+    >>> validate_item_format_against_type("application-name", "applications")
+    None
+    >>> validate_item_format_against_type("package_name=1.0.0", "requirements")
+    SystemExit: If the item is not valid for its type.
+
+    Args:
+        item: The item to validate.
+        item_type: The type of the item, either "requirements" or "applications".
+
+    Returns:
+        None
+
+    Raises:
+        SystemExit: If the item is not valid for its type.
+    """
+    if item_type == "requirements":
+        if not item_is_package_name(item):
+            log.error(
+                "Item %s is not a valid package name for requirements. It must be in "
+                "the format 'package_name' or 'package_name==X.Y.Z'.",
+                item,
+            )
+            sys.exit(1)
+        return
+    elif item_type == "applications":
+        if not item_is_application_name(item):
+            log.error(
+                "Item %s is not a valid application name. It must be in kebab-case.",
+                item,
+            )
+            sys.exit(1)
+        return
+    else:
+        log.error("Invalid item_type provided: %s. Must be either 'requirements' or 'applications'.", item_type)
+        sys.exit(1)
+
+def strip_version_from_package_name(package_name: str) -> str:
+    """
+    Strip the version number from a package name if it is formatted with a version.
+
+    >>> strip_version_from_package_name("package_name==1.0.0")
+    'package_name'
+    >>> strip_version_from_package_name("package_name")
+    'package_name'
+
+    Args:
+        package_name: The package name to strip the version from.
+
+    Returns:
+        str: The package name without the version number.
+    """
+    if item_is_formatted_with_version(package_name):
+        return package_name.split("==")[0]
+    return package_name
+
+def ingest_item_list(item_type: str, items: list[str]) -> list[str]:
+    """
+    Ingest a list of items and validate their format based on their type.
+
+    >>> ingest_item_list("requirements", ["package_name==1.0.0", "package_name"])
+    ['package_name', 'package_name']
+    >>> ingest_item_list("applications", ["application-name", "another-application"])
+    ['application-name', 'another-application']
+    >>> ingest_item_list("requirements", ["package_name=1.0.0"])
+    SystemExit: If any item is not valid for its type.
+    >>> ingest_item_list("application_1", ["ApplicationName"])
+    SystemExit: If any item is not valid for its type.
+
+    Args:
+        item_type: The type of items being ingested, either "requirements" or "applications".
+        items: A list of items to ingest.
+
+    Returns:
+        list[str]: A list of validated items.
+
+    Raises:
+        SystemExit: If any item is not valid for its type.
+    """
+    ret_list: list[str] = []
+    for item in items:
+        validate_item_format_against_type(item, item_type)
+        if item_type == "requirements":
+            package_name = strip_version_from_package_name(item)
+            validate_package(package_name)
+            ret_list.extend(package_name)
+        else:
+            ret_list.append(item)
+
+    return ret_list
+
 def unpack_items(
+    item_type: str | None = None,
     items: tuple[str, str|int] | list[str] | str | None = None,
     items_file: str | None = None,
 ) -> list[str]:
@@ -87,6 +306,7 @@ def unpack_items(
     Args:
         items: A tuple, list, or string of items to unpack.
         items_file: A file containing a list of items to unpack.
+        item_type: A string indicating the type of items being unpacked, either "requirements" or "applications".
 
     Returns:
         A list of strings containing the unpacked items.
@@ -102,11 +322,21 @@ def unpack_items(
     if not items and not items_file:
         return ret
 
+    if not item_type or item_type not in ["requirements", "applications"]:
+        log.error(
+            "Invalid item_type provided: %s. Must be either 'requirements' or "
+            "'applications'.",
+            item_type,
+        )
+        sys.exit(1)
+
     # Unpack the items based on their type
-    if isinstance(items, list):
-        ret.extend(items)
     if isinstance(items, str):
-        ret.append(items)
+        items = [items]
+    if isinstance(items, list):
+        ret.extend(ingest_item_list(item_type, items))
+
+    # If a file is provided, parse its contents and add them to the list
     if items_file:
         log.info("Commencing parsing the contents of %s to list", items_file)
 
@@ -118,6 +348,7 @@ def unpack_items(
 
         # Parse the file and format the relevant lines into a list of strings, inferring
         # their use based on their format, and ignoring both comments and empty lines
+        file_entries: list[str] = []
         with items_path.open("r") as f:
             for line in f:
                 line = line.strip()
@@ -125,36 +356,11 @@ def unpack_items(
                 # Ignore empty lines and comments
                 if not line or line.startswith("#"):
                     continue
+                file_entries.append(line)
+        
+        ret.extend(ingest_item_list(item_type, file_entries))
 
-                # Enforce that the line is a valid package name or package name with version number
-                if re.match(r"^[a-zA-Z0-9_-]+(==\d+\.\d+\.\d+)?$", line):
-                    log.warning(
-                        "%s is recognised as a package with a version number, removing "
-                        "the version number for compatibility with the virtual "
-                        "environment.",
-                        line
-                    )
-                    package_name = line.split("==")[0]
-                    validate_package(package_name)
-                    ret.append(package_name)
-                elif "=" in line:
-                    log.debug(
-                        "Received string %s, not formatting it assuming that it is a "
-                        "project script.",
-                        line,
-                    )
-                    ret.append(line)
-                else:
-                    log.info(
-                        "Received string %s, assuming that it is a package name without "
-                        "a version number.",
-                        line,
-                    )
-                    validate_package(line)
-                    ret.append(line)
-
-                items_list.append(line)
-        return items_list
+    return ret
 
 
 def validate_compliance_with_naming_conventions(package_name: str, applications: list[str]) -> None:
@@ -299,7 +505,6 @@ def construct_application_file(application: str, application_path: Path) -> None
 
 def parse_applications(package_path: Path, applications: list[str]) -> str:
     """Construct default entry points for pyproject.toml and application files."""
-    template_entry_points = "[project.scripts]"
     package_name = package_path.name
     for application in applications:
         application_path = f"{package_name}/apps/__main_{application}__"
@@ -311,58 +516,6 @@ def parse_applications(package_path: Path, applications: list[str]) -> str:
         log.info("Added application %s to pyproject.toml", application)
 
     return template_entry_points
-
-
-def format_requirements(requirements: list[str]) -> list[str]:
-    """Format the requirements for use in pyproject.toml.
-    Requirements passed as either of:
-    * "package_name==X.Y.Z"
-    * "package_name"
-    Search the venv for each package. If version not specified, use available version.
-    If version specified and matches available, use it. If package not available, throw.
-    """
-    formatted_requirements = []
-    requirement_pattern_with_version = r"^[a-zA-Z0-9_-]+==\d+\.\d+\.\d+$"
-    requirement_pattern_without_version = r"^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$"
-    log.debug("Processing requirements: %s", requirements)
-    for requirement in requirements:
-        if bool(re.match(requirement_pattern_with_version, requirement)):
-            package_name, requested_package_version = requirement.split("==")
-        elif bool(re.match(requirement_pattern_without_version, requirement)):
-            package_name = requirement
-            requested_package_version = ""
-        else:
-            log.error(
-                "Requirement %s improperly formatted, expected a package name or a "
-                "package name with version number, e.g. <package_name==X.Y.Z>.",
-                requirement,
-            )
-            sys.exit(1)
-
-        try:
-            available_package_version = version(package_name)
-            if available_package_version == requested_package_version:
-                log.debug(
-                    "%s found with version %s", requirement, available_package_version
-                )
-                formatted_requirements.append(requirement)
-            else:
-                log.info(
-                    "Package %s requested with version %s, but found installed version "
-                    "%s. Using this version.",
-                    package_name,
-                    requested_package_version,
-                    available_package_version,
-                )
-                formatted_requirements.append(
-                    f"{package_name}=={available_package_version}"
-                )
-        except PackageNotFoundError:
-            log.exception(
-                "Package %s not found in environment, skipping.", package_name
-            )
-            sys.exit(1)
-    return formatted_requirements
 
 
 def construct_default_pyproject_toml(
@@ -388,7 +541,6 @@ def construct_default_pyproject_toml(
         log.info("Added all script entry points")
 
     if requirements:
-        requirements = format_requirements(list(requirements))
         requirements_str = "\n".join(f'\t"{pkg}",' for pkg in requirements) + "\n"
         template_variables["DEPENDENCIES"] = requirements_str
 
@@ -419,7 +571,7 @@ def summary_logging(package_name: str, needs_description: bool) -> None:
     >>> summary_logging("my_package", True)
     [green]You have successfully created your package my_package[/green]. To publish it, you need to:
         Assign an appropriate [bold green]version number[/bold green] in the pyproject.toml
-        [bold green]'git push`[/bold green] to remote in your private github
+        [bold green]'git push`[/bold green] to remote in your private github, and set up a new remote if you haven't already
         Create a pull request for your changes.
         Set up your pytest-cov key.
         Add a [bold green]package description[/bold green] in the pyproject.toml
@@ -445,7 +597,7 @@ def summary_logging(package_name: str, needs_description: bool) -> None:
         "\tAssign an appropriate [bold green]version number[/bold green] in the "
         "pyproject.toml"
     )
-    log.warning("\t[bold green]'git push`[/bold green] to remote in your private github")
+    log.warning("\t[bold green]'git push`[/bold green] to remote in your private github, and set up a new remote if you haven't already")
     log.warning("\tCreate a pull request for your changes.")
     log.warning("\tSet up your pytest-cov key.")
     if needs_description:
@@ -597,17 +749,19 @@ def main(
 
     # Format the requirements and applications into lists
     requirements: list[str] = list(requirements_tuple)
+    log.info("Using requirements: %s", requirements)
     applications: list[str] = list(applications_tuple)
 
     # Unpack the requirements and applications from the files if provided
-    applications = unpack_items(applications, applications_file)
-    requirements = unpack_items(requirements, requirements_file)
+    applications = unpack_items("applications", applications, applications_file)
+    requirements = unpack_items("requirements", requirements, requirements_file)
 
     # Validate the package name and application names against the naming conventions
     validate_compliance_with_naming_conventions(package_name, applications)
 
     # Set up the package path
     package_path = Path.cwd() / Path(package_name)
+    log.info("Creating package %s in %s", package_name, package_path)
 
     # Default string for package description if not provided
     needs_description: bool = not package_description or package_description.strip() == ""

@@ -8,11 +8,11 @@ description = "{{ DESCRIPTION }}"
 version = "0.1.0"
 readme = "docs/README.md"
 requires-python = ">=3.10"
-{%- if DEPENDENCIES -%}
+{% if DEPENDENCIES %}
 dependencies = [
 {{ DEPENDENCIES }}
 ]
-{%- endif %}
+{% endif %}
 
 [project.optional-dependencies]
 dev = [
