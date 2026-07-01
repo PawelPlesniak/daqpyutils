@@ -16,18 +16,21 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest",
-    "pytest-cov",
-    "ruff",
-    "pre-commit",
-    {%- if STRICT -%}
-    "pytest-mypy",
-    {%- endif %}
+  "pytest",
+  "pytest-cov",
+  "ruff",
+  "pre-commit",
+  {%- if STRICT -%}
+  "pytest-mypy",
+  {%- endif %}
 ]
 # TODO - discuss this. This could be used for coverage testing in the CI dashboard, SWIT input required.
 test = [
-    "pytest",
-    "pytest-cov",
+  "pytest",
+  "pytest-cov",
+  {%- if STRICT -%}
+  "pytest-mypy",
+  {%- endif %}
 ]
 
 {%- if APPLICATIONS -%}
@@ -38,19 +41,19 @@ test = [
 [tool.setuptools.packages.find]
 where = ["src"]
 
-{%- if PROJECT_DATA -%}
+{%- if PACKAGE_DATA -%}
 [project.setuptools.package-data]
-{{ PROJECT_DATA }}
+{{ PACKAGE_DATA }}
 {%- endif %}
 
 [tool.pytest.ini_options]
 addopts = """
-    -v 
-    {%- if STRICT %} --mypy{% endif %}
-    --cov={{ PACKAGE_NAME }} 
-    --cov-report=html 
-    --doctest-modules 
-    --ignore=docs/
+  -v 
+  {%- if STRICT %} --mypy{% endif %}
+  --cov={{ PACKAGE_NAME }} 
+  --cov-report=html 
+  --doctest-modules 
+  --ignore=docs/
 """
 norecursedirs = [".git", ".github", "venv"]
 testpaths = ["tests"]
@@ -59,29 +62,34 @@ testpaths = ["tests"]
 source = [ "{{ PACKAGE_NAME }}" ]
 omit = ["tests/*"]
 
+{%- if STRICT %}
+[tool.ruff]
+line-length = 88
+{% endif -%}
+
 [tool.ruff.lint]
 ignore = ["D205", "D100", "D104"]
 pydocstyle.convention = "google"
 select = [
-    "D",     # pydocstyle: check for docstring conventions
-    "E",     # pycodestyle errors: standard PEP 8 errors
-    "F",     # Pyflakes: check for common programming errors
-    "I",     # isort: best practices for import order and sorting
-    "UP",    # pyupgrade: suggestions for code modernization
-    "RUF",   # Ruff-specific rules: built-in Ruff-specific warnings
-    "ANN",   # flake8-annotations: check for missing type annotations
+  "D",     # pydocstyle: check for docstring conventions
+  "E",     # pycodestyle errors: standard PEP 8 errors
+  "F",     # Pyflakes: check for common programming errors
+  "I",     # isort: best practices for import order and sorting
+  "UP",    # pyupgrade: suggestions for code modernization
+  "RUF",   # Ruff-specific rules: built-in Ruff-specific warnings
+  "ANN",   # flake8-annotations: check for missing type annotations
 {%- if STRICT %}
-    "S",     # flake8-bandit: check for common security issues
-    "N",     # pep8-naming: check for PEP 8 naming conventions
-    "ERA",   # eradicate: find and remove commented-out code
-    "B",     # flake8-bugbear: find likely bugs and design problems
-    "C4",    # flake8-comprehensions: improve list/dict/set comprehensions
-    "A",     # flake8-builtins: check for shadowing of Python built-in symbols
-    "RET",   # flake8-return: check for unnecessary return statements
-    "ISC",   # flake8-implicit-str-concat: detect implicit string concatenation
-    "G",     # flake8-logging-format: ensure proper logging format strings
-    "TRY",   # tryceratops: prevent abuse of try/except blocks
-    "T",     # flake8-debugger: catch tracepoints or debugger calls
+  "S",     # flake8-bandit: check for common security issues
+  "N",     # pep8-naming: check for PEP 8 naming conventions
+  "ERA",   # eradicate: find and remove commented-out code
+  "B",     # flake8-bugbear: find likely bugs and design problems
+  "C4",    # flake8-comprehensions: improve list/dict/set comprehensions
+  "A",     # flake8-builtins: check for shadowing of Python built-in symbols
+  "RET",   # flake8-return: check for unnecessary return statements
+  "ISC",   # flake8-implicit-str-concat: detect implicit string concatenation
+  "G",     # flake8-logging-format: ensure proper logging format strings
+  "TRY",   # tryceratops: prevent abuse of try/except blocks
+  "T",     # flake8-debugger: catch tracepoints or debugger calls
 {% endif -%}
 ]
 
@@ -90,6 +98,8 @@ select = [
 
 {%- if STRICT %}
 [tool.mypy]
+mypy_path = "src"
+
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 check_untyped_defs = true

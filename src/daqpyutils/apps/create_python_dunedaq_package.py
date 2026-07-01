@@ -19,7 +19,7 @@ template_variables: dict[str, str | bool] = {}
 
 
 def unpack_items(
-    items: tuple[str, ...] | list[str] | str | None = None,
+    items: tuple[str, str|int] | list[str] | str | None = None,
     items_file: str | None = None,
 ) -> list[str]:
     """Ensure the input is returned as a list of strings."""
@@ -373,7 +373,7 @@ def make_files(
     "requirements_tuple",
     type=str,
     multiple=True,
-    help="Define requiements for the pyproject.toml as e.g. 'click==8.1.7'",
+    help="Define requiements for the pyproject.toml as e.g. 'click'",
 )
 @click.option(
     "-rf",
@@ -433,24 +433,27 @@ def main(
         create_python_dunedaq_package <package_name>
 
     The directory from which you run this script must be empty, except for a possible
-    git/version control subdirectory.
+    git/version control subdirectory. It is recommended that you run this script from
+    <your_release_root>/pythoncode, as this is where the python-only packages are
+    expected to be located in the DUNE DAQ software repository.
 
     For details on how to write a DUNE DAQ package, please refer to the official
-    daq-cmake documentation at:
+    daq-cmake documentation which defines the DUNE-DAQ C++ repository standard at:
         https://dune-daq-sw.readthedocs.io/en/latest/packages/daq-cmake/
 
     For details on how to write a Python-only DUNE DAQ package, please refer to the
-    official daq-cmake documentation at:
-        https://dune-daq-sw.readthedocs.io/en/latest/packages/daqpython
+    official daqpyutils documentation at:
+        https://dune-daq-sw.readthedocs.io/en/latest/packages/daqpyutils/
     """
-    log.setLevel(log_level_to_int(log_level))
-    requirements: list[str] = list(requirements_tuple)
-    applications: list[str] = list(applications_tuple)
+    # Set up the logging instance
+    log.setLevel(logging_log_level_to_int(log_level))
 
+    # Perform the common checks on the package name and path
     if package_name == ".":
         log.error(
-            "You passed '.' as the name of the package. Perhaps you meant to use the "
-            "tool validate_python_dunedaq_package_structure?"
+            "You passed '.' as the name of the package, which is not a valid package "
+            "name. Perhaps you meant to use the tool [green]"
+            "validate_python_dunedaq_package_structure[/]?"
         )
         sys.exit(1)
     package_path = Path.cwd() / package_name
@@ -461,6 +464,10 @@ def main(
             package_name,
         )
         sys.exit(1)
+
+    # Format the requirements and applications into lists
+    requirements: list[str] = list(requirements_tuple)
+    applications: list[str] = list(applications_tuple)
 
     applications = unpack_items(applications, applications_file)
     requirements = unpack_items(requirements, requirements_file)
