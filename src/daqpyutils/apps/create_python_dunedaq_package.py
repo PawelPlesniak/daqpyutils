@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import click
-from daqpytools.logging.levels import log_level_to_int, logging_log_level_keys
+from daqpytools.logging.levels import logging_log_level_to_int, logging_log_level_keys
 from daqpytools.logging.logger import get_daq_logger
 from git import Repo
 from jinja2 import Template
@@ -388,7 +388,7 @@ def make_files(
 )
 @click.option(
     "-a",
-    "--app",
+    "--app-tuple",
     "applications_tuple",
     type=str,
     multiple=True,
@@ -396,7 +396,7 @@ def make_files(
 )
 @click.option(
     "-af",
-    "--app",
+    "--app-file",
     "applications_file",
     type=str,
     multiple=False,
@@ -425,7 +425,7 @@ def main(
     package_description: str,
     strict: bool,
 ) -> None:
-    """Create a new DUNEDAQ Python package.
+    """Create a new DUNE-DAQ Python package.
 
     This script generates much of the standard Python code for a new DUNE DAQ package.
 
