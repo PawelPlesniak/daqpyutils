@@ -358,7 +358,7 @@ def make_files(
     return
 
 
-@click.command()
+@click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.argument("package-name", nargs=1, type=str)
 @click.option(
     "-l",
