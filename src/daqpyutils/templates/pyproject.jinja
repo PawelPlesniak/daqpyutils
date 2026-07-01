@@ -4,11 +4,10 @@ requires = ["setuptools>=61.0"]
 
 [project]
 name = "{{ PACKAGE_NAME }}"
-requires-python = ">=3.10"
-readme = "docs/README.md"
-version = "0.0.0"
 description = "{{ DESCRIPTION }}"
-
+version = "0.1.0"
+readme = "docs/README.md"
+requires-python = ">=3.10"
 {%- if DEPENDENCIES -%}
 dependencies = [
 {{ DEPENDENCIES }}
@@ -19,12 +18,10 @@ dependencies = [
 dev = [
     "pytest",
     "pytest-cov",
-    {%- if STRICT -%}
     "ruff",
-    "pytest-mypy",
     "pre-commit",
-    "isort",
-    "black",
+    {%- if STRICT -%}
+    "pytest-mypy",
     {%- endif %}
 ]
 # TODO - discuss this. This could be used for coverage testing in the CI dashboard, SWIT input required.
@@ -38,148 +35,77 @@ test = [
 {{ APPLICATIONS }}
 {%- endif %}
 
-
-# Note - if the developer chooses to use signature checking with mypy, the dev options are the
-# correct place to install the external libraries that contian the stubs that are not contained
-# in the repo source. The standard package that contains most of the external stub libraries is
-# `typeshed`, but this should be configured on a per-repository basis.
-{%- if APPLICATIONS -%}
-[project.scripts]
-{{ APPLICATIONS }}
-{%- endif %}
-
-# Standard location for the project source code
 [tool.setuptools.packages.find]
 where = ["src"]
 
-# If static data is associated with the project, setuptools should be pointed to it
-{%- if PACKAGE_DATA -%}
-[tool.setuptools.package-data]
-{{ PACKAGE_DATA }}
+{%- if PROJECT_DATA -%}
+[project.setuptools.package-data]
+{{ PROJECT_DATA }}
 {%- endif %}
 
 [tool.pytest.ini_options]
-addopts = "-v --tb=short --cov=drunc --cov=src/drunc"
+addopts = """
+    -v 
+    {%- if STRICT %} --mypy{% endif %}
+    --cov={{ PACKAGE_NAME }} 
+    --cov-report=html 
+    --doctest-modules 
+    --ignore=docs/
+"""
+norecursedirs = [".git", ".github", "venv"]
 testpaths = ["tests"]
 
-
-
-# Ruff linting rules compliant with black defaults. Similar to PEP-8 rules.
-[tool.ruff]
-line-length = 88
+[tool.coverage.run]
+source = [ "{{ PACKAGE_NAME }}" ]
+omit = ["tests/*"]
 
 [tool.ruff.lint]
-select = [
-    "D",
-    "E",
-    "F",
-    "I",
-    "UP",
-    "RUF",
-    "ANN",
-{%- if STRICT -%}
-    "S",
-    "N",
-    "ERA",
-    "B",
-    "C4",
-    "A",
-    "RET",
-    "T20",
-    "ISC",
-    "G",
-    "TRY",
-    "T"
-{%- endif %}
-]
-ignore = [
-    "D205",
-    "D100",
-    "D104"
-]
+ignore = ["D205", "D100", "D104"]
 pydocstyle.convention = "google"
+select = [
+    "D",     # pydocstyle: check for docstring conventions
+    "E",     # pycodestyle errors: standard PEP 8 errors
+    "F",     # Pyflakes: check for common programming errors
+    "I",     # isort: best practices for import order and sorting
+    "UP",    # pyupgrade: suggestions for code modernization
+    "RUF",   # Ruff-specific rules: built-in Ruff-specific warnings
+    "ANN",   # flake8-annotations: check for missing type annotations
+{%- if STRICT %}
+    "S",     # flake8-bandit: check for common security issues
+    "N",     # pep8-naming: check for PEP 8 naming conventions
+    "ERA",   # eradicate: find and remove commented-out code
+    "B",     # flake8-bugbear: find likely bugs and design problems
+    "C4",    # flake8-comprehensions: improve list/dict/set comprehensions
+    "A",     # flake8-builtins: check for shadowing of Python built-in symbols
+    "RET",   # flake8-return: check for unnecessary return statements
+    "ISC",   # flake8-implicit-str-concat: detect implicit string concatenation
+    "G",     # flake8-logging-format: ensure proper logging format strings
+    "TRY",   # tryceratops: prevent abuse of try/except blocks
+    "T",     # flake8-debugger: catch tracepoints or debugger calls
+{% endif -%}
+]
 
-# The below mypy rules select the rules that have been selected to implement signature checking
-# should will be useful for online use. These are defined as follows, and should be changed on
-# a per-repository use case. These rules are defined below for convenience
-# Core strictness rules
-# disallow_untyped_defs - all functions have type annotations for their arguments and return values
-# disallow_incomplete_defs - as above, but requires all the functions to have signatures
-# check_untyped_defs - if a function is not fully typed, the type consistency inside the function is checked
-# no_implicit_optional - do not assume `Optional` can return `None`
-# Warn rules
-# warn_return_any - warn if functions return specific types but return `Any`
-# warn_unused_ignores - warn if `#type: ignore` is used but shouldn't be
-# warn_redundant_casts - warn if `cast()` is used but isn't needed
-# strict_equality - warn if different types (e.g. `str` == `int`) are used
-# `Any` rules
-# disallow_any_generics - stop implicit standard generic types, e.g. `List` which should be `List[int]`
-# disallow_subclassing_any - stop inheritance of `Any` type classes
-# disallow_any_explicit - stop the use of `Any` anywhere in code (hard mode)
-# disallow_any_expr - stop inferred `Any` (hard mode)
-# disallow_any_decorated - stop functions decorated with an untyped decorator
-# disallow_any_unimported - stop types from modules that haven't been imported
-# General rules (makes the use of `mypy` easier)
-# warn_unused_configs - check mypy settings are used
-# show_error_codes - show error codes when using mypy
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D100", "D103", "D104", "S101", "ANN201"]
+
 {%- if STRICT %}
 [tool.mypy]
-# Core strictness
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 check_untyped_defs = true
 no_implicit_optional = true
-
-# Warnings
 warn_return_any = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 strict_equality = true
-
-# "Any" restrictions
 disallow_any_generics = true
 disallow_subclassing_any = true
+
 disallow_any_explicit = true
-# disallow_any_expr is left at default (false)
+disallow_any_expr = false
 disallow_any_decorated = true
 disallow_any_unimported = true
 
-# Housekeeping
 warn_unused_configs = true
 show_error_codes = true
-{%- endif %}
-
-# These overrides are because the library stubs dont exist and not on typeshed
-[[tool.mypy.overrides]]
-ignore_missing_imports = true
-
-[tool.ruff.lint.per-file-ignores]
-"tests/*" = [
-    "D100",
-    "D103",
-    "D104",
-    "S101",
-    "ANN201"
-]
-{%- if RUFF_EXCLUDE -%}
-{{ RUFF_EXCLUDE }}
-{%- endif %}
-
-[tool.black]
-line-length = 88
-target-version = ["py310", "py311", "py312", "py313"]
-skip-magic-trailing-comma = true
-force-exclude = '''
-/(
-    \.git
-  | \.github
-  | \.ruff_cache
-)/
-'''
-
-[mypy]
-ignore_missing_imports = true
-
-
-[tool.coverage.run]
-omit = ["tests/*", "scripts/*"]
+{% endif -%}
