@@ -141,6 +141,8 @@ def item_is_package_name(item: str) -> bool:
         return False
     elif not item_is_formatted_in_kebab_case(package_name):
         return True
+    elif re.match(r"^[a-zA-Z0-9_-]+$", package_name):
+        return True
     return False
 
 def item_is_application_name(item: str) -> bool:
@@ -262,7 +264,7 @@ def ingest_item_list(item_type: str, items: list[str]) -> list[str]:
         if item_type == "requirements":
             package_name = strip_version_from_package_name(item)
             validate_package(package_name)
-            ret_list.extend(package_name)
+            ret_list.append(package_name)
         else:
             ret_list.append(item)
 
@@ -506,16 +508,17 @@ def construct_application_file(application: str, application_path: Path) -> None
 def parse_applications(package_path: Path, applications: list[str]) -> str:
     """Construct default entry points for pyproject.toml and application files."""
     package_name = package_path.name
+    template_entry_points = ""
     for application in applications:
-        application_path = f"{package_name}/apps/__main_{application}__"
+        application_path = f"{package_name}/apps/{application}"
         construct_application_file(
             application, package_path / "src" / (application_path + ".py")
         )
         application_entry_point = application_path.replace("/", ".") + ":main"
-        template_entry_points += f"\n{application} = {application_entry_point}"
+        template_entry_points += f"{application} = {application_entry_point}\n"
         log.info("Added application %s to pyproject.toml", application)
 
-    return template_entry_points
+    return template_entry_points.rstrip("\n")
 
 
 def construct_default_pyproject_toml(
@@ -541,7 +544,7 @@ def construct_default_pyproject_toml(
         log.info("Added all script entry points")
 
     if requirements:
-        requirements_str = "\n".join(f'\t"{pkg}",' for pkg in requirements) + "\n"
+        requirements_str = "\n".join(f'\t"{pkg}",' for pkg in requirements)
         template_variables["DEPENDENCIES"] = requirements_str
 
     template_variables["STRICT"] = bool(strict)
@@ -662,7 +665,7 @@ def make_files(
     "--requirements-file",
     "requirements_file",
     type=str,
-    multiple=False,
+    multiple=False, # If multiple are used in CLI, only the last instance is used.
     help=(
         "Define requiements for the pyproject.toml by pointing to a requirements file "
         "(e.g. requirements.txt)."
@@ -681,7 +684,7 @@ def make_files(
     "--app-file",
     "applications_file",
     type=str,
-    multiple=False,
+    multiple=False, # If multiple are used in CLI, only the last instance is used.
     help=(
         "Define applications for the pyproject.toml by pointing to a file containing a "
         "list of application names (e.g. applications.txt)."
@@ -749,12 +752,13 @@ def main(
 
     # Format the requirements and applications into lists
     requirements: list[str] = list(requirements_tuple)
-    log.info("Using requirements: %s", requirements)
     applications: list[str] = list(applications_tuple)
 
     # Unpack the requirements and applications from the files if provided
     applications = unpack_items("applications", applications, applications_file)
+    log.info("Applications to be created: %s", applications)
     requirements = unpack_items("requirements", requirements, requirements_file)
+    log.info("Requirements to be added to pyproject.toml: %s", requirements)
 
     # Validate the package name and application names against the naming conventions
     validate_compliance_with_naming_conventions(package_name, applications)

@@ -8,11 +8,11 @@ description = "{{ DESCRIPTION }}"
 version = "0.1.0"
 readme = "docs/README.md"
 requires-python = ">=3.10"
-{% if DEPENDENCIES %}
+{%- if DEPENDENCIES %}
 dependencies = [
 {{ DEPENDENCIES }}
 ]
-{% endif %}
+{%- endif %}
 
 [project.optional-dependencies]
 dev = [
@@ -20,7 +20,7 @@ dev = [
   "pytest-cov",
   "ruff",
   "pre-commit",
-  {%- if STRICT -%}
+  {% if STRICT -%}
   "pytest-mypy",
   {%- endif %}
 ]
@@ -28,12 +28,12 @@ dev = [
 test = [
   "pytest",
   "pytest-cov",
-  {%- if STRICT -%}
+  {% if STRICT -%}
   "pytest-mypy",
   {%- endif %}
 ]
 
-{%- if APPLICATIONS -%}
+{% if APPLICATIONS -%}
 [project.scripts]
 {{ APPLICATIONS }}
 {%- endif %}
@@ -41,20 +41,13 @@ test = [
 [tool.setuptools.packages.find]
 where = ["src"]
 
-{%- if PACKAGE_DATA -%}
+{% if PACKAGE_DATA -%}
 [project.setuptools.package-data]
 {{ PACKAGE_DATA }}
-{%- endif %}
+{%- endif -%}
 
 [tool.pytest.ini_options]
-addopts = """
-  -v 
-  {%- if STRICT %} --mypy{% endif %}
-  --cov={{ PACKAGE_NAME }} 
-  --cov-report=html 
-  --doctest-modules 
-  --ignore=docs/
-"""
+addopts = "-v{% if STRICT %} --mypy{% endif %} --cov={{ PACKAGE_NAME }} --cov-report=html --doctest-modules --ignore=docs/"
 norecursedirs = [".git", ".github", "venv"]
 testpaths = ["tests"]
 
@@ -62,10 +55,10 @@ testpaths = ["tests"]
 source = [ "{{ PACKAGE_NAME }}" ]
 omit = ["tests/*"]
 
-{%- if STRICT %}
+{% if STRICT -%}
 [tool.ruff]
 line-length = 88
-{% endif -%}
+{%- endif -%}
 
 [tool.ruff.lint]
 ignore = ["D205", "D100", "D104"]
