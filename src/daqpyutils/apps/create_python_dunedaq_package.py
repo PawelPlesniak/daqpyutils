@@ -17,44 +17,147 @@ template_path = Path(__file__).parent.parent / "templates"
 log = get_daq_logger(logger_name="create_python_dunedaq_package", rich_handler=True)
 template_variables: dict[str, str | bool] = {}
 
+def validate_package(package_name: str) -> bool:
+    """
+    Validate that the package is installed in the current environment.
+    If not found locally, checks if it exists on PyPI.
+
+    Args:
+        package_name: The name of the package to validate.
+
+    Returns:
+        bool: True if the package is found locally or on PyPI,.
+
+    Raises:
+        SystemExit: If the package is not found locally or on PyPI.
+    """
+    # 1. Check local environment first (fast)
+    try:
+        version(package_name)
+        log.debug("Package '%s' found in local environment.", package_name)
+        return True
+    except PackageNotFoundError:
+        log.debug("Package '%s' not found locally, checking PyPI...", package_name)
+
+    # 2. Check PyPI (slower, requires network)
+    try:
+        url = f"https://pypi.org/pypi/{package_name}/json"
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            log.info("Package '%s' exists on PyPI.", package_name)
+            return True
+    except requests.RequestException as e:
+        log.exception("Requested package %s was not found in either the virtual environment or in PyPI, exiting.%s", package_name, e)
+        sys.exit(1)
 
 def unpack_items(
     items: tuple[str, str|int] | list[str] | str | None = None,
     items_file: str | None = None,
 ) -> list[str]:
-    """Ensure the input is returned as a list of strings."""
-    if not items:
-        return []
+    """
+    Ensure the input is returned as a list of strings.
+
+    The file is expected to contain one item per line, with comments starting with # and
+    empty lines ignored. This will parse the contents of file intended to populate 
+    the requirements or applications list. 
+
+    For an example of parsing applications list, the items_file should look like:
+        # This is a comment
+        app1
+        app2
+        # Another comment
+        app3
+    
+    For an example of parsing requirements list, the items_file should look like:
+        # This is a comment
+        package1==1.0.0
+        package2
+        # Another comment
+        package3==2.1.0
+
+    Note - following the current virtual environment deployment model for releases, the
+    version numbers associated with each package will be removed, instead using packages
+    already included in the virtual environment, or allowing pip to determine a version
+    compatible with the other packages in the environment.
+    
+    Example usage:
+    >>> unpack_items(items=("package1==1.0.0", "package2"), items_file=None)
+    ['package1', 'package2']
+
+    Args:
+        items: A tuple, list, or string of items to unpack.
+        items_file: A file containing a list of items to unpack.
+
+    Returns:
+        A list of strings containing the unpacked items.
+
+    Raises:
+        SystemExit: If the input is invalid or if the items file does not exist.
+    """
+
+    # Construct the return variable
+    ret: list[str] = []
+
+    # Sanity check
+    if not items and not items_file:
+        return ret
+
+    # Unpack the items based on their type
     if isinstance(items, list):
-        return items
+        ret.extend(items)
     if isinstance(items, str):
-        return [items]
+        ret.append(items)
     if items_file:
-        log.info("parsing %s to list", items_file)
+        log.info("Commencing parsing the contents of %s to list", items_file)
+
+        # Validate that the file exists
         items_path = Path(items_file)
         if not items_path.is_file():
-            log.error("File %s does not exist.", items)
+            log.error("%s is not a file or does not exist, exiting.", items_file)
             sys.exit(1)
-        items_list = []
+
+        # Parse the file and format the relevant lines into a list of strings, inferring
+        # their use based on their format, and ignoring both comments and empty lines
         with items_path.open("r") as f:
             for line in f:
                 line = line.strip()
                 log.debug("Parsing %s", line)
+                # Ignore empty lines and comments
                 if not line or line.startswith("#"):
                     continue
-                if not re.match(r"^[a-zA-Z0-9_-]+(==\d+\.\d+\.\d+)?$", line):
-                    log.error("Invalid requirement format: %s", line)
-                    sys.exit(1)
+
+                # Enforce that the line is a valid package name or package name with version number
+                if re.match(r"^[a-zA-Z0-9_-]+(==\d+\.\d+\.\d+)?$", line):
+                    log.warning(
+                        "%s is recognised as a package with a version number, removing "
+                        "the version number for compatibility with the virtual "
+                        "environment.",
+                        line
+                    )
+                    package_name = line.split("==")[0]
+                    validate_package(package_name)
+                    ret.append(package_name)
+                elif "=" in line:
+                    log.debug(
+                        "Received string %s, not formatting it assuming that it is a "
+                        "project script.",
+                        line,
+                    )
+                    ret.append(line)
+                else:
+                    log.info(
+                        "Received string %s, assuming that it is a package name without "
+                        "a version number.",
+                        line,
+                    )
+                    validate_package(line)
+                    ret.append(line)
+
                 items_list.append(line)
         return items_list
-    log.error(
-        "Invalid input type. Expected a list of strings or a single string, got %s.",
-        type(items),
-    )
-    sys.exit(1)
 
 
-def validate_names(package_name: str, applications: list[str]) -> None:
+def validate_compliance_with_naming_conventions(package_name: str, applications: list[str]) -> None:
     """Validate the package names."""
     if package_name == ".":
         log.error(
@@ -308,22 +411,49 @@ def construct_inits(package_path: Path) -> None:
     return
 
 
-def summary_logging(package_name: str) -> None:
-    """Summarize the package creation."""
+def summary_logging(package_name: str, needs_description: bool) -> None:
+    """
+    Summarize the package creation, and the remaining tasks required to integrate the 
+    package with the DUNE-DAQ github oragnization.
+    
+    >>> summary_logging("my_package", True)
+    [green]You have successfully created your package my_package[/green]. To publish it, you need to:
+        Assign an appropriate [bold green]version number[/bold green] in the pyproject.toml
+        [bold green]'git push`[/bold green] to remote in your private github
+        Create a pull request for your changes.
+        Set up your pytest-cov key.
+        Add a [bold green]package description[/bold green] in the pyproject.toml
+        Get in touch with John Freeman and Andrew Mogan for review before they include it in the DUNEDAQ organization.
+
+    Args:
+        package_name: The name of the package that was created.
+        needs_description: A boolean indicating whether the package description was 
+            provided or not.
+
+    Returns:
+        None
+
+    Raises:
+        None
+    """
     log.warning(
         "[green]You have successfully created your package %s[/green]. To publish "
         "it, you need to:",
         package_name,
     )
     log.warning(
-        "Assign an appropriate [bold green]version number[/bold green] in the "
+        "\tAssign an appropriate [bold green]version number[/bold green] in the "
         "pyproject.toml"
     )
-    log.warning("[bold green]'git push`[/bold green] to remote in your private github")
-    log.warning("Create a pull request for your changes.")
-    log.warning("Set up your pytest-cov key.")
+    log.warning("\t[bold green]'git push`[/bold green] to remote in your private github")
+    log.warning("\tCreate a pull request for your changes.")
+    log.warning("\tSet up your pytest-cov key.")
+    if needs_description:
+        log.warning(
+            "\tAdd a [bold green]package description[/bold green] in the pyproject.toml"
+        )
     log.warning(
-        "Get in touch with John Freeman and Andrew Mogan for review before they "
+        "\tGet in touch with John Freeman and Andrew Mogan for review before they "
         "include it in the DUNEDAQ organization."
     )
 
@@ -469,19 +599,26 @@ def main(
     requirements: list[str] = list(requirements_tuple)
     applications: list[str] = list(applications_tuple)
 
+    # Unpack the requirements and applications from the files if provided
     applications = unpack_items(applications, applications_file)
     requirements = unpack_items(requirements, requirements_file)
 
-    validate_names(package_name, applications)
+    # Validate the package name and application names against the naming conventions
+    validate_compliance_with_naming_conventions(package_name, applications)
+
+    # Set up the package path
     package_path = Path.cwd() / Path(package_name)
 
+    # Default string for package description if not provided
+    needs_description: bool = not package_description or package_description.strip() == ""
     if package_description is None:
         package_description = "Description left as an exercise for the developer."
+
 
     make_subdirs(package_path, applications)
     log.debug("Subdirectories created in %s", package_path)
     make_files(package_path, requirements, applications, package_description, strict)
-    summary_logging(package_name)
+    summary_logging(package_name, needs_description)
     return
 
 
