@@ -96,6 +96,15 @@ This is the list of standard excludes for DUNE DAQ packages from git versioning.
 
 ## `.pre_commit_config.yml`
 Contains the set of standard checks to run when executing `git commit`. This is currently configured to run the `ruff` linter, with the unit testing deferred to the CI workflows for convenience during running. The linting rules are set up in the `pyproject.toml`, thus are defined there too. Unlike other external tools, the configuration for `pre-commit` cannot natively be specified in the `pyproject.toml` as it is a language agnostic framework.
+Note - this requires manual installation to use, and can be disabled at any time. To enable this functionality, after the repository is cloned, to activate the `pre-commit` hooks the developer must run
+```
+pre-commit install
+```
+and to remove these hooks, they can be removed as 
+```
+pre-commit uninstall
+```
+This is an additional tool, which has some overlap with the CI workflow. The use of this tool is at the user's discresion.
 
 ## `pyproject.toml`
 This file defines the blueprint of how the package is intended to be build, what it requires in various installation modes, entry points, and standard tooling configuration. Each of these topics will be defined individually as follows.
