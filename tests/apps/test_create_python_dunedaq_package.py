@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 from _pytest.logging import LogCaptureFixture
 from click.testing import CliRunner, Result
-
 from daqpyutils.apps.__main_create_python_dunedaq_package__ import (
     construct_application_file,
     construct_default_dot_github,

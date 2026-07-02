@@ -3,11 +3,11 @@ import shutil
 import sys
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-import requests
 from typing import Any
 
 import click
-from daqpytools.logging.levels import logging_log_level_to_int, logging_log_level_keys
+import requests
+from daqpytools.logging.levels import logging_log_level_keys, logging_log_level_to_int
 from daqpytools.logging.logger import get_daq_logger
 from git import Repo
 from jinja2 import Template
@@ -18,9 +18,9 @@ template_path = Path(__file__).parent.parent / "templates"
 log = get_daq_logger(logger_name="create_python_dunedaq_package", rich_handler=True)
 template_variables: dict[str, str | bool] = {}
 
+
 def validate_package(package_name: str) -> bool:
-    """
-    Validate that the package is installed in the current environment.
+    """Validate that the package is installed in the current environment.
     If not found locally, checks if it exists on PyPI.
 
     Args:
@@ -35,10 +35,11 @@ def validate_package(package_name: str) -> bool:
     # Check local environment
     try:
         version(package_name)
-        log.debug("Package '%s' found in local environment.", package_name)
-        return True
     except PackageNotFoundError:
         log.debug("Package '%s' not found locally, checking PyPI...", package_name)
+    else:
+        log.debug("Package '%s' found in local environment.", package_name)
+        return True
 
     # Check PyPI
     try:
@@ -48,16 +49,23 @@ def validate_package(package_name: str) -> bool:
             log.info("Package '%s' exists on PyPI.", package_name)
             return True
     except requests.exceptions.ConnectionError:
-        log.error("Request to PyPI timed out while checking for package '%s' - is your web proxy off?", package_name)
+        log.exception(
+            "Request to PyPI timed out while checking for package '%s' - is your web "
+            "proxy off?",
+            package_name,
+        )
         sys.exit(1)
-    except requests.RequestException as e:
-        log.exception(e)
-        log.error("Requested package %s was not found in either the virtual environment or in PyPI, exiting.", package_name)
+    except requests.RequestException:
+        log.exception(
+            "Requested package %s was not found in either the virtual environment or "
+            "in PyPI, exiting.",
+            package_name,
+        )
         sys.exit(1)
 
+
 def item_is_formatted_with_version(item: str) -> bool:
-    """
-    Determine if the given item is formatted with a version number.
+    """Determine if the given item is formatted with a version number.
 
     Assumes that package names consist of alphanumeric characters, underscores, and
     hyphens, and either zero or two equals signs. If a single equals sign is used, this
@@ -81,9 +89,9 @@ def item_is_formatted_with_version(item: str) -> bool:
     """
     return bool(re.match(r"^[a-zA-Z0-9_-]+==\d+\.\d+\.\d+$", item))
 
+
 def item_is_formatted_in_kebab_case(item: str) -> bool:
-    """
-    Determine if the given item is defined in kebab-case.
+    """Determine if the given item is defined in kebab-case.
 
     Assumes that application names consist of lowercase alphanumeric characters and
     hyphens, and do not contain underscores or equals signs.
@@ -106,9 +114,9 @@ def item_is_formatted_in_kebab_case(item: str) -> bool:
     """
     return bool(re.match(r"^[a-z0-9]+(-[a-z0-9]+)*$", item))
 
+
 def item_is_package_name(item: str) -> bool:
-    """
-    Determine if the given item is a package name following the default conventions.
+    """Determine if the given item is a package name following the default conventions.
 
     Assumes that package names consist of alphanumeric characters, underscores, and
     hyphens, and either zero or two equals signs. If a single equals sign is used, this
@@ -132,22 +140,21 @@ def item_is_package_name(item: str) -> bool:
     Raises:
         None
     """
-
     package_name = item.split("==")[0] if "==" in item else item
 
     if item_is_formatted_with_version(item):
         return True
-    elif "=" in item:
+    if "=" in item:
         return False
-    elif not item_is_formatted_in_kebab_case(package_name):
+    if not item_is_formatted_in_kebab_case(package_name):
         return True
-    elif re.match(r"^[a-zA-Z0-9_-]+$", package_name):
+    if re.match(r"^[a-zA-Z0-9_-]+$", package_name):
         return True
     return False
 
+
 def item_is_application_name(item: str) -> bool:
-    """
-    Determine if the given item is a package name or a project script.
+    """Determine if the given item is a package name or a project script.
 
     Assumes that package names consist of alphanumeric characters, underscores, and
     hyphens, and either zero or two equals signs. If a single equals sign is used, this
@@ -169,14 +176,13 @@ def item_is_application_name(item: str) -> bool:
     Raises:
         None
     """
-
     if item_is_formatted_in_kebab_case(item):
         return True
     return False
 
+
 def validate_item_format_against_type(item: str, item_type: str) -> None:
-    """
-    Validate the given item based on its type.
+    """Validate the given item based on its type.
 
     >>> validate_item_format_against_type("package_name==1.0.0", "requirements")
     None
@@ -204,7 +210,7 @@ def validate_item_format_against_type(item: str, item_type: str) -> None:
             )
             sys.exit(1)
         return
-    elif item_type == "applications":
+    if item_type == "applications":
         if not item_is_application_name(item):
             log.error(
                 "Item %s is not a valid application name. It must be in kebab-case.",
@@ -212,13 +218,16 @@ def validate_item_format_against_type(item: str, item_type: str) -> None:
             )
             sys.exit(1)
         return
-    else:
-        log.error("Invalid item_type provided: %s. Must be either 'requirements' or 'applications'.", item_type)
-        sys.exit(1)
+    log.error(
+        "Invalid item_type provided: %s. Must be either 'requirements' or "
+        "'applications'.",
+        item_type,
+    )
+    sys.exit(1)
+
 
 def strip_version_from_package_name(package_name: str) -> str:
-    """
-    Strip the version number from a package name if it is formatted with a version.
+    """Strip the version number from a package name if it is formatted with a version.
 
     >>> strip_version_from_package_name("package_name==1.0.0")
     'package_name'
@@ -235,9 +244,9 @@ def strip_version_from_package_name(package_name: str) -> str:
         return package_name.split("==")[0]
     return package_name
 
+
 def ingest_item_list(item_type: str, items: list[str]) -> list[str]:
-    """
-    Ingest a list of items and validate their format based on their type.
+    """Ingest a list of items and validate their format based on their type.
 
     >>> ingest_item_list("requirements", ["package_name==1.0.0", "package_name"])
     ['package_name', 'package_name']
@@ -249,7 +258,8 @@ def ingest_item_list(item_type: str, items: list[str]) -> list[str]:
     SystemExit: If any item is not valid for its type.
 
     Args:
-        item_type: The type of items being ingested, either "requirements" or "applications".
+        item_type: The type of items being ingested, either "requirements" or
+            "applications".
         items: A list of items to ingest.
 
     Returns:
@@ -270,17 +280,17 @@ def ingest_item_list(item_type: str, items: list[str]) -> list[str]:
 
     return ret_list
 
+
 def unpack_items(
     item_type: str | None = None,
-    items: tuple[str, str|int] | list[str] | str | None = None,
+    items: tuple[str, str | int] | list[str] | str | None = None,
     items_file: str | None = None,
 ) -> list[str]:
-    """
-    Ensure the input is returned as a list of strings.
+    """Ensure the input is returned as a list of strings.
 
     The file is expected to contain one item per line, with comments starting with # and
-    empty lines ignored. This will parse the contents of file intended to populate 
-    the requirements or applications list. 
+    empty lines ignored. This will parse the contents of file intended to populate
+    the requirements or applications list.
 
     For an example of parsing applications list, the items_file should look like:
         # This is a comment
@@ -288,7 +298,7 @@ def unpack_items(
         app2
         # Another comment
         app3
-    
+
     For an example of parsing requirements list, the items_file should look like:
         # This is a comment
         package1==1.0.0
@@ -300,7 +310,7 @@ def unpack_items(
     version numbers associated with each package will be removed, instead using packages
     already included in the virtual environment, or allowing pip to determine a version
     compatible with the other packages in the environment.
-    
+
     Example usage:
     >>> unpack_items(items=("package1==1.0.0", "package2"), items_file=None)
     ['package1', 'package2']
@@ -308,7 +318,8 @@ def unpack_items(
     Args:
         items: A tuple, list, or string of items to unpack.
         items_file: A file containing a list of items to unpack.
-        item_type: A string indicating the type of items being unpacked, either "requirements" or "applications".
+        item_type: A string indicating the type of items being unpacked, either
+            "requirements" or "applications".
 
     Returns:
         A list of strings containing the unpacked items.
@@ -316,7 +327,6 @@ def unpack_items(
     Raises:
         SystemExit: If the input is invalid or if the items file does not exist.
     """
-
     # Construct the return variable
     ret: list[str] = []
 
@@ -359,13 +369,15 @@ def unpack_items(
                 if not line or line.startswith("#"):
                     continue
                 file_entries.append(line)
-        
+
         ret.extend(ingest_item_list(item_type, file_entries))
 
     return ret
 
 
-def validate_compliance_with_naming_conventions(package_name: str, applications: list[str]) -> None:
+def validate_compliance_with_naming_conventions(
+    package_name: str, applications: list[str]
+) -> None:
     """Validate the package names."""
     if package_name == ".":
         log.error(
@@ -567,22 +579,21 @@ def construct_inits(package_path: Path) -> None:
 
 
 def summary_logging(package_name: str, needs_description: bool) -> None:
-    """
-    Summarize the package creation, and the remaining tasks required to integrate the 
+    """Summarize the package creation, and the remaining tasks required to integrate the
     package with the DUNE-DAQ github oragnization.
-    
+
     >>> summary_logging("my_package", True)
-    [green]You have successfully created your package my_package[/green]. To publish it, you need to:
-        Assign an appropriate [bold green]version number[/bold green] in the pyproject.toml
-        [bold green]'git push`[/bold green] to remote in your private github, and set up a new remote if you haven't already
-        Create a pull request for your changes.
+    [green]You have successfully package my_package[/green]. To publish it, you need to:
+        [bold green]'git push`[/bold green] to remote in your private github
+            Set up a new remote if you haven't already
+        Set `develop` as the main branch, as this is the standard that DUNE DAQ uses.
         Set up your pytest-cov key.
         Add a [bold green]package description[/bold green] in the pyproject.toml
-        Get in touch with John Freeman and Andrew Mogan for review before they include it in the DUNEDAQ organization.
+        Contact John Freeman and Andrew Mogan for integration into DUNEDAQ organization.
 
     Args:
         package_name: The name of the package that was created.
-        needs_description: A boolean indicating whether the package description was 
+        needs_description: A boolean indicating whether the package description was
             provided or not.
 
     Returns:
@@ -600,7 +611,10 @@ def summary_logging(package_name: str, needs_description: bool) -> None:
         "\tAssign an appropriate [bold green]version number[/bold green] in the "
         "pyproject.toml"
     )
-    log.warning("\t[bold green]'git push`[/bold green] to remote in your private github, and set up a new remote if you haven't already")
+    log.warning(
+        "\t[bold green]'git push`[/bold green] to remote in your private github, and "
+        "set up a new remote if you haven't already"
+    )
     log.warning("\tCreate a pull request for your changes.")
     log.warning("\tSet up your pytest-cov key.")
     if needs_description:
@@ -665,7 +679,7 @@ def make_files(
     "--requirements-file",
     "requirements_file",
     type=str,
-    multiple=False, # If multiple are used in CLI, only the last instance is used.
+    multiple=False,  # If multiple are used in CLI, only the last instance is used.
     help=(
         "Define requiements for the pyproject.toml by pointing to a requirements file "
         "(e.g. requirements.txt)."
@@ -684,7 +698,7 @@ def make_files(
     "--app-file",
     "applications_file",
     type=str,
-    multiple=False, # If multiple are used in CLI, only the last instance is used.
+    multiple=False,  # If multiple are used in CLI, only the last instance is used.
     help=(
         "Define applications for the pyproject.toml by pointing to a file containing a "
         "list of application names (e.g. applications.txt)."
@@ -768,10 +782,11 @@ def main(
     log.info("Creating package %s in %s", package_name, package_path)
 
     # Default string for package description if not provided
-    needs_description: bool = not package_description or package_description.strip() == ""
+    needs_description: bool = (
+        not package_description or package_description.strip() == ""
+    )
     if package_description is None:
         package_description = "Description left as an exercise for the developer."
-
 
     make_subdirs(package_path, applications)
     log.debug("Subdirectories created in %s", package_path)
