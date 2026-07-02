@@ -1,0 +1,37 @@
+
+# Run pytests and generate coverage report
+
+name: Test, Type Check, and Coverage
+
+on: [push]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: "3.10.10"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install itself
+        run: |
+          pip cache purge
+          pip install --upgrade pip
+          pip install .[test]
+
+      - name: Run tests, and generate coverage
+        run: pytest --cov-report=xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
