@@ -44,7 +44,7 @@ where = ["src"]
 {% if PACKAGE_DATA -%}
 [project.setuptools.package-data]
 {{ PACKAGE_DATA }}
-{%- endif -%}
+{%- endif %}
 
 [tool.pytest.ini_options]
 addopts = "-v{% if STRICT %} --mypy{% endif %} --cov={{ PACKAGE_NAME }} --cov-report=html --doctest-modules --ignore=docs/"
