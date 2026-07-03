@@ -6,21 +6,8 @@ from pathlib import Path
 import pytest
 from _pytest.logging import LogCaptureFixture
 from click.testing import CliRunner, Result
-from daqpyutils.apps.__main_create_python_dunedaq_package__ import (
-    construct_application_file,
-    construct_default_dot_github,
-    construct_default_gitignore,
-    construct_default_pre_commit_config_yaml,
-    construct_default_pyproject_toml,
-    construct_default_readme_md,
-    copy_template,
-    format_requirements,
-    make_subdirs,
-    parse_applications,
-    unpack_items,
-    validate_names,
-)
-from daqpyutils.apps.__main_create_python_dunedaq_package__ import (
+from daqpyutils.apps.create_python_dunedaq_package import summary_logging
+from daqpyutils.apps.create_python_dunedaq_package import (
     main as create_python_dunedaq_package,
 )
 
@@ -30,6 +17,23 @@ test_package_name = "testPackage"
 
 
 def strip_ansi(text: str) -> str:
+    """
+    Strip ANSI escape sequences from the given text and remove newlines and carriage 
+    returns.
+
+    >>> strip_ansi("\x1b[31mHello\x1b[0m\nWorld\r")
+    'HelloWorld'
+
+    Args:
+        text (str): The input text from which to remove ANSI escape sequences.
+
+    Returns:
+        str: The text with ANSI escape sequences removed and newlines/carriage returns
+        replaced with empty strings.
+
+    Raises:
+        None
+    """
     text = ANSI_ESCAPE_RE.sub("", text)
     return text.replace("\n", "").replace("\r", "")
 

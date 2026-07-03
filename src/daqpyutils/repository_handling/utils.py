@@ -21,7 +21,15 @@ def validate_package(package_name: str) -> bool:
     """Validate that the package is installed in the current environment.
     If not found locally, checks if it exists on PyPI.
 
-
+    >>> validate_package("numpy")
+    True
+    >>> validate_package("nonexistent_package")
+    Package nonexistent_package not found locally, checking PyPI...
+    Requested package nonexistent_package was not found in either the virtual environment or in PyPI, exiting.
+    SystemExit: If the package is not found locally or on PyPI.
+    >>> validate_package("A-FMM")
+    Package A-FMM not found locally, checking PyPI...
+    Package A-FMM exists on PyPI.
 
     Args:
         package_name: The name of the package to validate.
@@ -116,11 +124,10 @@ def item_is_formatted_in_kebab_case(item: str) -> bool:
 
 
 def item_is_package_name(item: str) -> bool:
-    """Determine if the given item is a package name following the default conventions.
+    """Determine if the given item is a package name following conventions.
 
-    Assumes that package names consist of alphanumeric characters, underscores, and
-    hyphens, and either zero or two equals signs. If a single equals sign is used, this
-    script determines that this item is a a project script specifier.
+    Supports PEP 508 compliant names and specifically checks for version 
+    specifiers (==) versus project specifiers (=).
 
     >>> item_is_package_name("package-name==1.0.0")
     True
@@ -129,28 +136,18 @@ def item_is_package_name(item: str) -> bool:
     >>> item_is_package_name("package-name=1.0.0")
     False
     >>> item_is_package_name("package_name")
-    False
-
-    Args:
-        item: The item to check.
-
-    Returns:
-        bool: True if the item is a package name, False if it is a project script.
-
-    Raises:
-        None
+    True
     """
-    package_name = item.split("==")[0] if "==" in item else item
-
-    if item_is_formatted_with_version(item):
-        return True
-    if "=" in item:
+    package_name = item
+    if "==" in item:
+        # Get the package name only
+        package_name = item.split("==")[0]
+    # Reject project script specifiers
+    elif "=" in item:
         return False
-    if not item_is_formatted_in_kebab_case(package_name):
-        return True
-    if re.match(r"^[a-zA-Z0-9_-]+$", package_name):
-        return True
-    return False
+        
+    # Validate package name against PEP 508 compliant regex
+    return bool(re.match(r"^([A-Z0-9]|[A-Z0-9][A-Z0-9._-]*[A-Z0-9])$", package_name, re.IGNORECASE))
 
 
 def item_is_application_name(item: str) -> bool:
@@ -205,7 +202,7 @@ def validate_item_format_against_type(item: str, item_type: str) -> None:
         if not item_is_package_name(item):
             log.error(
                 "Item %s is not a valid package name for requirements. It must be in "
-                "the format 'package_name' or 'package_name==X.Y.Z'.",
+                "a PEP-8 compliant format.",
                 item,
             )
             sys.exit(1)
