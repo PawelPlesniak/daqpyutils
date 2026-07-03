@@ -5,7 +5,7 @@ requires = ["setuptools >= 61.0"]
 [project]
 description = "Description left as an exercise for the developer."
 name = "daqpyutils"
-version = "0.1.0"
+version = "1.0.0"
 readme = "docs/README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -27,7 +27,11 @@ dev = [
   "ruff",
   "pre-commit",
 ]
-test = ["pytest", "pytest-mypy", "pytest-cov"]
+test = [
+  "pytest",
+  "pytest-mypy",
+  "pytest-cov",
+]
 
 [project.scripts]
 create-python-dunedaq-package = "daqpyutils.apps.create_python_dunedaq_package:main"
@@ -39,7 +43,7 @@ where = ["src"]
 daqpyutils = ["templates/*", "templates/**/*"]
 
 [tool.pytest.ini_options]
-addopts = "-v --mypy -p no:warnings --cov=. --cov-report=html --doctest-modules --ignore=docs/ --ignore=src/daqpytools/apps/"
+addopts = "-v --mypy --cov=daqpyutils --cov-report=html --doctest-modules --ignore=docs/ --ignore=src/daqpytools/apps/"
 norecursedirs = [".git", ".github", "venv"]
 testpaths = ["tests"]
 
@@ -51,7 +55,11 @@ omit = ["tests/*"]
 line-length = 88
 
 [tool.ruff.lint]
-ignore = ["D205", "D100", "D104", "D212"]
+ignore = [
+  "D100",   # Require a docstring at the top of your module/file
+  "D104",   # Require a docstring in the package __init__.py
+  "D212",   # Start the summary text on the same line as opening triple quotes
+]
 pydocstyle.convention = "google"
 select = [
   "D",     # pydocstyle: check for docstring conventions
@@ -75,7 +83,14 @@ select = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D100", "D103", "D104", "S101", "ANN201"]
+"tests/*" = [
+  "D100",   # Require a docstring at the top of your module/file
+  "D103",   # Require a docstring in public functions
+  "D104",   # Require a docstring in the package __init__.py
+  "D212",   # Start the summary text on the same line as opening triple quotes
+  "S101",   # Block the use of assert
+  "ANN201", # Require return type signatures in public functions
+]
 
 [tool.mypy]
 mypy_path = "src"

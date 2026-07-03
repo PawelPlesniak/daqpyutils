@@ -47,7 +47,7 @@ where = ["src"]
 {%- endif %}
 
 [tool.pytest.ini_options]
-addopts = "-v{% if STRICT %} --mypy{% endif %} --cov={{ PACKAGE_NAME }} --cov-report=html --doctest-modules --ignore=docs/"
+addopts = "-v{% if STRICT %} --mypy{% endif %} --cov={{ PACKAGE_NAME }} --cov-report=html --doctest-modules --ignore=docs/{% if APPLICATIONS %} --ignore=src/{{ PACKAGE_NAME }}/apps/{% endif %}"
 norecursedirs = [".git", ".github", "venv"]
 testpaths = ["tests"]
 
