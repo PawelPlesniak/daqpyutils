@@ -8,7 +8,7 @@ In order to simplify the installation and maintenance approach of the python-onl
 │   └── ISSUE_TEMPLATE/
 │   └── workflows/
 │       └── lint.yml
-│       └── run_pytest.yml
+│       └── pytest.yml
 │       └── track_new_issues.yml
 │       └── track_new_prs.yml
 │   └── pull_request_template.md
@@ -38,7 +38,7 @@ Allows for repository maintenance in GitHub. The user is not expected to develop
 Allows for the standard definition location of tools that are used to support a GitHub based deployment model. It contains the definitions of issue templates, which are templates that are used by the organization for standardized definitions of issue structures, centralizing management of the development lifecycle by defining metadata allowing tracking of development progress, and planning for release cycles. The standard issue templates are defined and managed by the Software Co-ordination team, which is defined [here](https://github.com/DUNE-DAQ/.github/tree/develop/issue-templates).
 
 This path also defines both standard and repository specific CI/CD workflows. These are actions that can be run on the GitHub nodes to run automated checks prior to merging a pull request. In the template defined above, the following workflows are defined and managed [here](https://github.com/DUNE-DAQ/.github/tree/develop/workflow-templates) DUNE DAQ organization
- - `run_pytest.yml` - runs the unit tests defined in the `tests/` path.
+ - `pytest.yml` - runs the unit tests defined in the `tests/` path with `pytest` configuration defined in the `pyproject.toml`.
  - `track_new_issues.yml` - assigns new issues to the DUNE DAQ [project board](https://github.com/orgs/DUNE-DAQ/projects/5).
  - `track_new_prs.yml` - assigns new PRs to the DUNE DAQ [project board](https://github.com/orgs/DUNE-DAQ/projects/5).
 
@@ -60,7 +60,7 @@ The standard use case for this directory is documented [here](https://dune-daq-s
 
 As an example, in [`druncschema`](https://github.com/DUNE-DAQ/druncschema), a general user is not expected to recompile the schemas using the [compilation script](https://github.com/DUNE-DAQ/druncschema/blob/develop/scripts/generate_protos.py). This action is only necessary on changes of the schema, which require a local copy of the repository.
 
-Any other scripts that the user should have access to when a package is installed should be defined as an `entry-point`, which is defined below in the description of the structure of the `pyproject.toml`.
+Any other scripts that the user should have access to when a package is installed should be defined as an `entry-point`, which is defined below in the description of the structure of the `pyproject.toml`. Note - that as this is not always required in a repository, the constructing tool `create-python-dunedaq-template` does not instantiate this.
 
 ## `src`
 

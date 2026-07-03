@@ -15,6 +15,7 @@ from jinja2 import Template
 from daqpyutils.repository_handling.defaults import default_subdirs
 
 log = get_daq_logger("daqpyutils.repository_handling.utils", rich_handler=True)
+log.setLevel(logging_log_level_to_int("INFO"))
 template_path = Path(__file__).parent.parent / "templates"
 
 def validate_package(package_name: str) -> bool:
@@ -418,6 +419,7 @@ def make_subdirs(package_path: Path, applications: list[str]) -> None:
     package_name = package_path.name
     create_subdirs = [package_path / subdir for subdir in default_subdirs]
     create_subdirs.append(package_path / "src" / package_name)
+    create_subdirs.append(package_path / "src" / package_name / "integtest")
     if applications:
         create_subdirs.append(package_path / "src" / package_name / "apps")
     for subdir in create_subdirs:
@@ -569,6 +571,7 @@ def construct_inits(package_path: Path) -> None:
     directories = [
         d for d in (package_path / "src" / package_path.name).rglob("*") if d.is_dir()
     ]
+    directories.append(package_path / "src" / package_path.name)
     for directory in directories:
         log.error(f"{directory}")
         for exclusion_path in ["integtest", "github"]:

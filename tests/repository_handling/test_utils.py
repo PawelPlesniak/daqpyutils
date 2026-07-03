@@ -531,12 +531,6 @@ def test_make_files(tmp_path: Path) -> None:
     init_file_src = src_dir / "__init__.py"
     assert init_file_src.exists() and init_file_src.is_file()
 
-    # Check if the repo has __init__.py files in the integtest directory
-    integtest_dir = src_dir / "integtest"
-    assert integtest_dir.exists() and integtest_dir.is_dir()
-    init_file_integtest = integtest_dir / "__init__.py"
-    assert not init_file_integtest.exists()
-
 # tests/repository_handling/test_utils.py::test_parse_applications FAILED
 # tests/repository_handling/test_utils.py::test_construct_default_pyproject_toml FAILED
 # tests/repository_handling/test_utils.py::test_construct_inits FAILED
