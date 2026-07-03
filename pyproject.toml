@@ -51,7 +51,7 @@ omit = ["tests/*"]
 line-length = 88
 
 [tool.ruff.lint]
-ignore = ["D205", "D100", "D104"]
+ignore = ["D205", "D100", "D104", "D212"]
 pydocstyle.convention = "google"
 select = [
   "D",     # pydocstyle: check for docstring conventions

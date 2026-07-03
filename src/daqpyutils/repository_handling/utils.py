@@ -21,6 +21,8 @@ def validate_package(package_name: str) -> bool:
     """Validate that the package is installed in the current environment.
     If not found locally, checks if it exists on PyPI.
 
+
+
     Args:
         package_name: The name of the package to validate.
 

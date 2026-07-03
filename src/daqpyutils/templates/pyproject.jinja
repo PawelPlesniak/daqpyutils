@@ -61,33 +61,43 @@ line-length = 88
 {%- endif %}
 
 [tool.ruff.lint]
-ignore = ["D205", "D100", "D104", "D212"]
-pydocstyle.convention = "google"
+ignore = [
+  "D100",   # Require a docstring at the top of your module/file
+  "D104",   # Require a docstring in the package __init__.py
+  "D212",   # Start the summary text on the same line as opening triple quotes
+]
 select = [
-  "D",     # pydocstyle: check for docstring conventions
-  "E",     # pycodestyle errors: standard PEP 8 errors
-  "F",     # Pyflakes: check for common programming errors
-  "I",     # isort: best practices for import order and sorting
-  "UP",    # pyupgrade: suggestions for code modernization
-  "RUF",   # Ruff-specific rules: built-in Ruff-specific warnings
-  "ANN",   # flake8-annotations: check for missing type annotations
+  "D",      # pydocstyle: check for docstring conventions
+  "E",      # pycodestyle errors: standard PEP 8 errors
+  "F",      # Pyflakes: check for common programming errors
+  "I",      # isort: best practices for import order and sorting
+  "UP",     # pyupgrade: suggestions for code modernization
+  "RUF",    # Ruff-specific rules: built-in Ruff-specific warnings
+  "ANN",    # flake8-annotations: check for missing type annotations
 {%- if STRICT %}
-  "S",     # flake8-bandit: check for common security issues
-  "N",     # pep8-naming: check for PEP 8 naming conventions
-  "ERA",   # eradicate: find and remove commented-out code
-  "B",     # flake8-bugbear: find likely bugs and design problems
-  "C4",    # flake8-comprehensions: improve list/dict/set comprehensions
-  "A",     # flake8-builtins: check for shadowing of Python built-in symbols
-  "RET",   # flake8-return: check for unnecessary return statements
-  "ISC",   # flake8-implicit-str-concat: detect implicit string concatenation
-  "G",     # flake8-logging-format: ensure proper logging format strings
-  "TRY",   # tryceratops: prevent abuse of try/except blocks
-  "T",     # flake8-debugger: catch tracepoints or debugger calls
+  "S",      # flake8-bandit: check for common security issues
+  "N",      # pep8-naming: check for PEP 8 naming conventions
+  "ERA",    # eradicate: find and remove commented-out code
+  "B",      # flake8-bugbear: find likely bugs and design problems
+  "C4",     # flake8-comprehensions: improve list/dict/set comprehensions
+  "A",      # flake8-builtins: check for shadowing of Python built-in symbols
+  "RET",    # flake8-return: check for unnecessary return statements
+  "ISC",    # flake8-implicit-str-concat: detect implicit string concatenation
+  "G",      # flake8-logging-format: ensure proper logging format strings
+  "TRY",    # tryceratops: prevent abuse of try/except blocks
+  "T",      # flake8-debugger: catch tracepoints or debugger calls
 {% endif -%}
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D100", "D103", "D104", "S101", "ANN201"]
+"tests/*" = [
+  "D100",   # Require a docstring at the top of your module/file
+  "D103",   # Require a docstring in public functions
+  "D104",   # Require a docstring in the package __init__.py
+  "D212",   # Start the summary text on the same line as opening triple quotes
+  "S101",   # Block the use of assert
+  "ANN201", # Require return type signatures in public functions
+]
 
 {%- if STRICT %}
 [tool.mypy]

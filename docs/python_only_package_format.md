@@ -156,15 +156,19 @@ Rules:
  - `F` - `Pyflakes`: check for common programming errors
  - `I` - `isort`: best practices for import order and sorting
  - `UP` - `pyupgrade`: suggestions for code modernization
- - `RUF` - Ruff-specific rules: built-in Ruff-specific warnings
+ - `RUF` - `ruff`-specific rules: built-in Ruff-specific warnings
  - `ANN` - `flake8-annotations`: check for missing type annotations
 
 Ignore rules:
- - `D205` - Documentation Existence - Every module needs a summary.
- - `D100` - Documentation Existence - Every package needs a summary.
- - `D104` - Documentation Formatting - Separate the summary from details.
+ - `D100` - Documentation existence - Every package needs a summary at the top of the module/file.
+ - `D104` - Documentation formatting - Separate the summary from details.
+ - `D212` - Documentation formatting - Docstring starts on the same line as `"""`.
+
+Select rules:
+ - `D213` - Documentatino formatting - Docstring starts on new line after `"""`.
 
 There are also specific rules implemented for the unit tests, these are defined in the `[tool.ruff.lint.per-file-ignores]` section. The default rules in the template include those in the ignore rules section above, and are extended to include
+ - `D103` - allow public functions without docstrings
  - `S101` - allows for `assert`s in the tests
  - `ANN201` - allows for missing return types
 
@@ -193,7 +197,7 @@ For most development in python, the implementation defined above is sufficient f
 
 If strict mode is used, the following additional rules are also implemented
  - The `pytest-mypy` options are added to the `pytest` configuration.
- - The line length is restricted to 88 characters.
+ - The line length is restricted to 88 characters. This follows the `black` coding convention.
  - The following `ruff` linting rules are also put in place
     - `S` - `flake8-bandit`: check for common security issues
     - `N` - `pep8-naming`: check for PEP 8 naming conventions
