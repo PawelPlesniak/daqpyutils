@@ -571,8 +571,10 @@ def construct_inits(package_path: Path) -> None:
         d for d in (package_path / "src" / package_path.name).rglob("*") if d.is_dir()
     ]
     for directory in directories:
-        if directory in ["integtest", ".github"]:
-            continue
+        log.error(f"{directory}")
+        for exclusion_path in ["integtest", "github"]:
+            if exclusion_path in str(directory):
+                continue
         file = directory / "__init__.py"
         file.touch()
     return

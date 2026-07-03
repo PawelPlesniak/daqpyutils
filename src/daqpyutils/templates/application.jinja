@@ -1,9 +1,21 @@
+from daqpytools.logging.logger import get_daq_logger
+
+
 def main() -> None:
-    print("This is the implementation code for application {{ APPLICATION }}()")
+    """
+    Implementation specification for {{ APPLICATION }}.
+
+    This is just a log so the developer can see where to put their entry point.
+    The following lines should be populated by the developer.
+    """
+    log = get_daq_logger(logger_name="{{ APPLICATION }}", rich_handler=True)
+    log.setLevel("INFO")
+    log.info("Here is the entry point of {{ APPLICATION }}")
     return
 
 if __name__ == "__main__":
     """
-
+    Main entry point for application {{ APPLICATION }}.
+    Any entry points specified in `click` should wrap the function `main`.
     """
     main()
