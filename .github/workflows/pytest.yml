@@ -34,7 +34,7 @@ jobs:
           
           # Navigate back to your root workspace folder and install package under test
           cd pythoncode/$GITHUB_WORKSPACE
-          git clone https://github.com/${{ github.event.pull_request.head.repo.owner.login }}/daqpytools.git -b ${{ github.head_ref }} ||  git clone https://github.com/DUNE-DAQ/daqpytools.git -b ${{ github.head_ref }} 
+          git clone https://github.com/DUNE-DAQ/daqpytools.git -b ${{ github.head_ref }} 
           cd daqpytools
           python -m pip install --upgrade pip
           pip install .[test]
