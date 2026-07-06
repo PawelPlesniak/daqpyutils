@@ -24,24 +24,28 @@ jobs:
           source /cvmfs/dunedaq.opensciencegrid.org/setup_dunedaq.sh
           setup_dbt latest_v5
           dbt-create -n last_fddaq
-          cd NFD_DEV*
-          source env.sh
-          dbt-build
-          dbt-workarea-env
 
       - name: Setup Python environment, install package, and run tests
         if: success()
         run: |
           # Source your environment first
-          cd nightly/NFD_DEV* || true
+          cd nightly/NFD_DEV*
           source env.sh
           
           # Navigate back to your root workspace folder and install package under test
-          cd $GITHUB_WORKSPACE
+          cd pythoncode/$GITHUB_WORKSPACE
+          git clone https://github.com/${{ github.event.pull_request.head.repo.owner.login }}/daqpytools.git -b ${{ github.head_ref }} ||  git clone https://github.com/DUNE-DAQ/daqpytools.git -b ${{ github.head_ref }} 
+          cd daqpytools
           python -m pip install --upgrade pip
           pip install .[test]
 
-          pytest
+          pytest --junitxml=junit/test-results.xml --cov=drunc --cov-report=html
+
+      - name: Publish JUnit test report
+        uses: mikepenz/action-junit-report@v5
+        if: ${{ !cancelled() }}
+        with:
+          report_paths: '${{ env.DRUNC_DIR }}/junit/test-results.xml'
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
