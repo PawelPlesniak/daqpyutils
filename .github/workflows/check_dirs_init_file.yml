@@ -15,7 +15,8 @@ jobs:
 
       - name: Look for __init__ files
         run: |
-          target_dir="src/<package_name>"
+          repo_name="${GITHUB_REPOSITORY##*/}"
+          target_dir="src/$repo_name"
           
           # Find directories, excluding __pycache__ and your integtest folder
           missing=$(find "$target_dir" -type d \
