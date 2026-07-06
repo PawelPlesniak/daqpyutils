@@ -180,7 +180,7 @@ def test_unpack_items() -> None:
 
     # Test ingesting a requirements file with invalid formats and a valid tuple
     with tempfile.NamedTemporaryFile(delete=True) as temp_file:
-        temp_file.write(b"daqpyutils==1.0.0\ninvalid_format\n")
+        temp_file.write(b"daqpyutils==1.0.0\ninvalid_format!\n")
         temp_file.seek(0)
         temp_file_path = temp_file.name
         requirements_list = ["matplotlib==3.11.0"]
