@@ -1,37 +1,103 @@
-# Run pytests with mypy, doctests, and coverage
-
+# Run pytests with mypy, doctests, and coverage inside DUNE Container (Agnostic Template)
 name: Test, Type Check, and Coverage
 
-on: [push]
+on:
+  # Run on any pushes to the main branch which releases are generated from
+  push:
+    branches:
+      - develop
+      - 'prep-release/**'
+
+  # Run on any pull requests targeting the main branch which releases are generated from
+  pull_request:
+    branches:
+      - develop
+      - 'prep-release/**'
+
+# Cancel any running jobs for this same branch if a new commit is pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        python-version: ["3.10", "3.11"]
+    defaults:
+      run:
+        shell: bash
+
+    container:
+      image: ghcr.io/dune-daq/nightly-release-alma9:development_v5
 
     steps:
-      - uses: actions/checkout@v4
+      # 1. Checkout the current commit repository directly into the container workspace
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies
+      # 2. Initialize your DUNE Workarea using the image's internal CVMFS
+      - name: Set up dev nightly
+        if: ${{ !cancelled() }}
         run: |
-          pip install --upgrade pip
+          mkdir -p nightly
+          cd nightly
+          source /cvmfs/dunedaq.opensciencegrid.org/setup_dunedaq.sh
+          setup_dbt latest
+          dbt-create -n last_fddaq
+
+      # 3. Handle variables, completely agnostic clone, and test execution
+      - name: Setup Python environment, clone package, build workarea, and run tests
+        if: success()
+        run: |
+          # 1. Resolve active branch and repository name metadata
+          BRANCH="${{ github.head_ref || github.ref_name }}"
+          REPO_NAME="${{ github.event.repository.name }}"
+          echo "Target branch: $BRANCH | Target repository: $REPO_NAME"
+
+          # 2. Source nightly testing environment
+          echo "Setting up the nightly testing environment..."
+          cd nightly/NFD_DEV*
+          source env.sh
+          echo "Entered nightly environment: $(pwd)"
+          
+          # 3. Move to the standard pythoncode directory location
+          echo "Entering the pythoncode directory..."
+          cd pythoncode
+          echo "Entered pythoncode directory: $(pwd)"
+          
+          # 5. Clone the relevant repo
+          echo "Cloning the repository $REPO_NAME ..."
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+              git clone "https://github.com/${{ github.event.pull_request.head.repo.full_name }}.git" -b "$BRANCH" "$REPO_NAME" || \
+              git clone "https://github.com/${{ github.repository }}.git" -b "$BRANCH" "$REPO_NAME"
+          else
+              git clone "https://github.com/${{ github.repository }}.git" -b "$BRANCH" "$REPO_NAME"
+          fi
+          echo "Repository cloned: $(pwd)/$REPO_NAME"
+
+          # 6. Navigate directly into the package directory to install dependencies and test
+          echo "Navigating into the package directory..."
+          cd $REPO_NAME
+          echo "Current directory: $(pwd)"
+          echo "Installing package in testing mode"
+          python -m pip install --upgrade pip
           pip install .[test]
+          echo "Package $REPO_NAME installed in testing mode"
 
-      - name: Run tests, mypy, and generate coverage
-        run: |
-          pytest
+          # 8. Execute testing engine
+          echo "Running tests with coverage..."
+          pytest --junitxml=junit/test-results.xml --cov=. --cov-report=xml --cov-report=html
+          echo "TARGET_DIR=$(pwd)" >> $GITHUB_ENV
+
+      - name: Publish JUnit test report
+        uses: mikepenz/action-junit-report@v5
+        if: ${{ !cancelled() }}
+        with:
+          report_paths: '${{ env.TARGET_DIR }}/junit/test-results.xml'
 
       - name: Upload coverage to Codecov
-        if: matrix.python-version == '3.10'
         uses: codecov/codecov-action@v5
+        if: ${{ !cancelled() }}
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage.xml
+          files: ${{ env.TARGET_DIR }}/coverage.xml

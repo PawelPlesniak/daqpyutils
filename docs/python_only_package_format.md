@@ -38,7 +38,7 @@ Allows for repository maintenance in GitHub. The user is not expected to develop
 Allows for the standard definition location of tools that are used to support a GitHub based deployment model. It contains the definitions of issue templates, which are templates that are used by the organization for standardized definitions of issue structures, centralizing management of the development lifecycle by defining metadata allowing tracking of development progress, and planning for release cycles. The standard issue templates are defined and managed by the Software Co-ordination team, which is defined [here](https://github.com/DUNE-DAQ/.github/tree/develop/issue-templates).
 
 This path also defines both standard and repository specific CI/CD workflows. These are actions that can be run on the GitHub nodes to run automated checks prior to merging a pull request. In the template defined above, the following workflows are defined and managed [here](https://github.com/DUNE-DAQ/.github/tree/develop/workflow-templates) DUNE DAQ organization
- - `pytest.yml` - runs the unit tests defined in the `tests/` path with `pytest` configuration defined in the `pyproject.toml`.
+ - `pytest.yml` - runs the unit tests defined in the `tests/` path with `pytest` configuration defined in the `pyproject.toml`. Note this has been configured assuming a core dependency on the DUNE DAQ organization's nightly releases. It is suggested that the user of this tool review this and adjust accordingly.
  - `track_new_issues.yml` - assigns new issues to the DUNE DAQ [project board](https://github.com/orgs/DUNE-DAQ/projects/5).
  - `track_new_prs.yml` - assigns new PRs to the DUNE DAQ [project board](https://github.com/orgs/DUNE-DAQ/projects/5).
 
