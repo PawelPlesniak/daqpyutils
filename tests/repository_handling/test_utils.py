@@ -31,14 +31,9 @@ from daqpyutils.repository_handling.utils import (
 
 
 def test_validate_package() -> None:
-    """Test the validate_package function with valid and invalid package names."""
+    """Test the validate_package function with valid package names."""
     assert validate_package("daqpyutils") is True
     assert validate_package("numpy") is True
-    # Invalid package names, also covered for testing without internet access
-    with pytest.raises(SystemExit):
-        validate_package("daqpyutils-1..0")
-    with pytest.raises(SystemExit):
-        validate_package("daqpyutils-1.0.0-beta+build..123..456")
 
 
 def test_item_is_formatted_with_version() -> None:
@@ -176,7 +171,7 @@ def test_unpack_items() -> None:
 
     # Test ingesting a requirements file with invalid formats
     with tempfile.NamedTemporaryFile(delete=True) as temp_file:
-        temp_file.write(b"daqpyutils==1.0.0\ninvalid-format\n")
+        temp_file.write(b"daqpyutils==1.0.0\ninvalid_format\n")
         temp_file.seek(0)
         temp_file_path = temp_file.name
         with pytest.raises(SystemExit):

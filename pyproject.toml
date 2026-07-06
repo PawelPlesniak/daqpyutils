@@ -33,6 +33,7 @@ test = [
   "pytest-mypy",
   "pytest-cov",
   "types-requests",
+  "ruff",
 ]
 
 [project.scripts]
