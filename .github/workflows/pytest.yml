@@ -33,8 +33,9 @@ jobs:
           source env.sh
           
           # Navigate back to your root workspace folder and install package under test
+          cd pythoncode
           git clone https://github.com/${{ github.event.pull_request.head.repo.owner.login }}/daqpytools.git -b ${{ github.head_ref }} ||  git clone https://github.com/DUNE-DAQ/daqpytools.git -b ${{ github.head_ref }} 
-          cd pythoncode/$GITHUB_WORKSPACE
+          cd $GITHUB_WORKSPACE
           cd daqpytools
           python -m pip install --upgrade pip
           pip install .[test]
