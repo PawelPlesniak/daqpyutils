@@ -3,11 +3,6 @@ build-backend = "setuptools.build_meta"
 requires = ["setuptools >= 61.0"]
 
 [project]
-description = "Description left as an exercise for the developer."
-name = "daqpyutils"
-readme = "docs/README.md"
-requires-python = ">=3.10"
-version = "0.1.0"
 dependencies = [
   "click",
   "GitPython",
@@ -17,8 +12,32 @@ dependencies = [
   "rich",
   "sh",
   "types-pytz",
-  "daqpytools @ git+https://github.com/PawelPlesniak/daqpytools@develop",
 ]
+description = "Description left as an exercise for the developer."
+name = "daqpyutils"
+readme = "docs/README.md"
+requires-python = ">=3.10"
+version = "1.0.0"
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "pytest-cov",
+  "pytest-mypy",
+  "ruff",
+  "pre-commit",
+  "types-requests",
+]
+test = [
+  "pytest",
+  "pytest-mypy",
+  "pytest-cov",
+  "types-requests",
+  "ruff",
+]
+
+[project.scripts]
+create-python-dunedaq-package = "daqpyutils.apps.create_python_dunedaq_package:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -26,74 +45,78 @@ where = ["src"]
 [tool.setuptools.package-data]
 daqpyutils = ["templates/*", "templates/**/*"]
 
-[project.optional-dependencies]
-dev = [
-  "ruff",
-  "pre-commit",
-  "pytest",
-  "black",
-  "pytest-cov",
-  "pytest-mypy",
-  "taplo",
-]
-test = ["pytest", "pytest-mypy", "pytest-cov"]
-
-[project.scripts]
-daqpytools-logging-demonstrator = "daqpytools.apps.__main_logging_demonstrator__:main"
-create-python-dunedaq-package = "daqpyutils.apps.__main_create_python_dunedaq_package__:main"
-
-[tool.ruff]
-line-length = 88
-
-[tool.ruff.lint]
-ignore = ["D205", "D100", "D104"]
-pydocstyle.convention = "google"
-select = [
-  "D",
-  "E",
-  "F",
-  "I",
-  "UP",
-  "RUF",
-  "ANN",
-  "S",
-  "N",
-  "ERA",
-  "B",
-  "C4",
-  "A",
-  "RET",
-  "T20",
-  "ISC",
-  "G",
-  "TRY",
-  "T",
-]
-
-[tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D100", "D103", "D104", "S101", "ANN201"]
-
-[tool.black]
-force-exclude = '''
-/(
-    \.git
-  | \.github
-  | \.ruff_cache
-)/
-
-'''
-line-length = 88
-skip-magic-trailing-comma = true
-target-version = ["py310", "py311", "py312", "py313"]
-
-[tool.mypy]
-ignore_missing_imports = true
-mypy_path = "src"
-
 [tool.pytest.ini_options]
-addopts = "-v --mypy -p no:warnings --cov=. --cov-report=html --doctest-modules --ignore=docs/ --ignore=src/daqpytools/apps/"
+addopts = "-v --mypy --cov=daqpyutils --cov-report=html --doctest-modules --ignore=docs/ --ignore=src/daqpytools/apps/"
 norecursedirs = [".git", ".github", "venv"]
 testpaths = ["tests"]
 
 [tool.coverage.run]
 omit = ["tests/*"]
+source = ["{{ PACKAGE_NAME }}"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+ignore = [
+  "D100", # Require a docstring at the top of your module/file
+  "D104", # Require a docstring in the package __init__.py
+  "D212", # Start the summary text on the same line as opening triple quotes
+]
+pydocstyle.convention = "google"
+select = [
+  "D", # pydocstyle: check for docstring conventions
+  "E", # pycodestyle errors: standard PEP 8 errors
+  "F", # Pyflakes: check for common programming errors
+  "I", # isort: best practices for import order and sorting
+  "UP", # pyupgrade: suggestions for code modernization
+  "RUF", # Ruff-specific rules: built-in Ruff-specific warnings
+  "ANN", # flake8-annotations: check for missing type annotations
+  "S", # flake8-bandit: check for common security issues
+  "N", # pep8-naming: check for PEP 8 naming conventions
+  "ERA", # eradicate: find and remove commented-out code
+  "B", # flake8-bugbear: find likely bugs and design problems
+  "C4", # flake8-comprehensions: improve list/dict/set comprehensions
+  "A", # flake8-builtins: check for shadowing of Python built-in symbols
+  "RET", # flake8-return: check for unnecessary return statements
+  "ISC", # flake8-implicit-str-concat: detect implicit string concatenation
+  "G", # flake8-logging-format: ensure proper logging format strings
+  "TRY", # tryceratops: prevent abuse of try/except blocks
+  "T", # flake8-debugger: catch tracepoints or debugger calls
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+  "D100", # Require a docstring at the top of your module/file
+  "D103", # Require a docstring in public functions
+  "D104", # Require a docstring in the package __init__.py
+  "D212", # Start the summary text on the same line as opening triple quotes
+  "E501", # Allow longer lines in test files
+  "S101", # Block the use of assert
+  "S603", # Allow subprocesses without shells
+  "S607", # Allow subprocesses with partial paths
+  "T201", # Allow print calls in test files
+  "ANN201", # Require return type signatures in public functions
+]
+
+[tool.mypy]
+mypy_path = "src"
+
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_subclassing_any = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+strict_equality = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unused_ignores = true
+
+disallow_any_decorated = true
+disallow_any_explicit = true
+disallow_any_expr = false
+disallow_any_unimported = true
+
+show_error_codes = true
+warn_unused_configs = true

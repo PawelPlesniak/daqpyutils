@@ -12,21 +12,30 @@
 
 # daqpyutils
 Package for python tools, includes:
- - Package handling and creation
- - Updating package versions in preparations for a release
+ - Creation of python-only repositories in line with current standards
+ - Validating conformance of python packages with the accepted standards
+ - Updating python-only package versions in preparations for a release
 
 ## How should I install this package?
 This is the same as per any standard python repository, which should be installed as
 ```bash
 pip install .
 ```
-from the directory in which it has been cloned. For developers, do install it in editor mode with `-e`.
+from the directory in which it has been cloned. For developers, do install it in editor mode with `-e`. Optional dependencies may be installed by use case, e.g. if developing this package, this can be installed as
+```bash
+pip install -e .[dev]
+```
+Alternatively if running the unit tests, one can use
+```bash
+pip install -e .[test]
+```
+The differences between these installation mode dictates what additional packages are installed. For an example of these differences, the user is recommended to open this project's `pyproject.toml` and review the section `[project.optional-dependencies]`, which lists the additional packages allowed depending on the installation mode.
 
 ## Entry points
 ### `create_python_dunedaq_package`
 Sets up a new standard python repository. Run this as
 ```bash
-create_python_dunedaq_package <package_name> 
+create-python-dunedaq-package <package_name> 
     -l/--log-level <logging level> 
     -c/--clean 
     -o/--overwrite 

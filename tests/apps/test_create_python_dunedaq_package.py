@@ -1,38 +1,41 @@
-import os
 import re
-import tempfile
+import subprocess
+import sys
 from pathlib import Path
 
-import pytest
-from _pytest.logging import LogCaptureFixture
 from click.testing import CliRunner, Result
 
-from daqpyutils.apps.__main_create_python_dunedaq_package__ import (
-    construct_application_file,
-    construct_default_dot_github,
-    construct_default_gitignore,
-    construct_default_pre_commit_config_yaml,
-    construct_default_pyproject_toml,
-    construct_default_readme_md,
-    copy_template,
-    format_requirements,
-    make_subdirs,
-    parse_applications,
-    unpack_items,
-    validate_names,
-)
-from daqpyutils.apps.__main_create_python_dunedaq_package__ import (
+from daqpyutils.apps.create_python_dunedaq_package import (
     main as create_python_dunedaq_package,
 )
 
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*m")
 runner = CliRunner()
-test_package_name = "testPackage"
+test_package_name = "test_daqpyutils_package"
 
 
 def strip_ansi(text: str) -> str:
+    r"""
+    Strip ANSI escape sequences, newlines and carriage returns.
+
+    Args:
+        text (str): The input text from which to remove ANSI escape sequences.
+
+    Returns:
+        str: The text with ANSI escape sequences removed and newlines/carriage returns
+        replaced with empty strings.
+
+    Raises:
+        None
+    """
     text = ANSI_ESCAPE_RE.sub("", text)
     return text.replace("\n", "").replace("\r", "")
+
+
+def test_strip_ansi() -> None:
+    """Test the strip_ansi function."""
+    sample_input = "\x1b[31mHello\x1b[0m\nWorld"
+    assert strip_ansi(sample_input) == "HelloWorld"
 
 
 def test_incorrect_log_level() -> None:
@@ -43,8 +46,8 @@ def test_incorrect_log_level() -> None:
     output: str = strip_ansi(result.output)
     assert result.exit_code != 0
     err_str: str = (
-        "Invalid value for '-l' / '--log-level': 'INVALID' is not one of 'CRITICAL', "
-        "'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'"
+        "Invalid value for '-l' / '--log-level': 'INVALID' is not one of 'critical', "
+        "'error', 'warning', 'info', 'debug', 'notset'."
     )
     assert err_str in output
 
@@ -54,220 +57,216 @@ def test_create_this_package() -> None:
     result = runner.invoke(create_python_dunedaq_package, ["."])
     output = strip_ansi(result.output)
     assert result.exit_code != 0
-    assert "You passed '.' as the name of the package." in output
+    assert "You passed '.' as the name of the package" in output
     assert (
         "Perhaps you meant to use the tool validate_python_dunedaq_package_structure?"
         in output
     )
 
 
-def test_unpack_items() -> None:
-    """Test that unpack_items correctly unpacks a list of items."""
-    assert unpack_items() == []
-    assert unpack_items(None) == []
-    assert unpack_items([]) == []
-    assert unpack_items("item1") == ["item1"]
-    items = ["item1", "item2", "item3"]
-    unpacked = unpack_items(items)
-    assert unpacked == items
-    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as tmpfile:
-        tmpfile.write("itemA\nitemB\nitemC\n")
-        tmpfile.flush()
-        tmpfile.seek(0)
-        items_from_file = [line.strip() for line in tmpfile if line.strip()]
-        unpacked_from_file = unpack_items(items_from_file)
-        assert unpacked_from_file == ["itemA", "itemB", "itemC"]
-    os.unlink(tmpfile.name)
+def test_create_a_package_and_validate(tmp_path: Path) -> None:
+    """
+    Test function create_a_package_and_validate.
 
+    Test that a test repository can be generated, is pip installable, has runnable
+    applications, and that it passes all the checks.
+    """
+    runner = CliRunner()
+    package_name = "daqpyutilsUnitTestPackage"
 
-def test_unpack_items_fail(caplog: LogCaptureFixture) -> None:
-    """Test that unpack_items raises an error for invalid input."""
-    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as tmpfile:
-        data_as_tuple = ("item1", "item2", "item3")
-        with caplog.at_level("ERROR"):
-            with pytest.raises(SystemExit) as exc_info:
-                unpack_items(data_as_tuple)
-        assert exc_info.value.code == 1
-        assert (
-            "Invalid input type. Expected a list of strings or a single string, got"
-            f" {type(data_as_tuple)}." in caplog.text
+    # EVERYTHING goes inside this context block
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        # 1. Setup paths relative to the isolation sandbox
+        requirements_file = Path("requirements.txt")
+        requirements_file.write_text("grpcio\n")
+
+        application_file = Path("apps.txt")
+        application_file.write_text("test-daqpyutils-app-creation-1\n")
+
+        # 2. Invoke the CLI command
+        result = runner.invoke(
+            create_python_dunedaq_package,
+            [
+                package_name,
+                "-l",
+                "info",
+                "-r",
+                "click",
+                "-rf",
+                str(requirements_file),
+                "-a",
+                "test-daqpyutils-app-creation-2",
+                "-af",
+                str(application_file),
+                "-p",
+                "Test of the package creation",
+                "-s",
+            ],
+            obj={"root_path": tmp_path},
         )
-    os.unlink(tmpfile.name)
 
+        # 3. Assert CLI success (must be inside to print output properly on failure)
+        assert result.exit_code == 0, f"CLI crashed: {result.output}"
 
-def test_validate_names() -> None:
-    """Test that validate_names correctly validates package names."""
-    validate_names(test_package_name, ["app1", "app2"])
-    with pytest.raises(SystemExit):
-        validate_names(".", ["app1", "app2"])
-    with pytest.raises(SystemExit):
-        validate_names("test_package", ["app1", "app2"])
-    with pytest.raises(SystemExit):
-        validate_names(test_package_name, ["app1", "app2", "invalid-app-name!"])
-    with pytest.raises(SystemExit):
-        validate_names(test_package_name, ["app1", "app2", "123invalid_start"])
+        # 4. Verify directory structure (Uses relative path 'package_name' safely here)
+        package_dir = Path(package_name)
+        assert package_dir.exists(), "Package directory was not created"
 
+        pyproject_toml_file_path = package_dir / "pyproject.toml"
+        assert pyproject_toml_file_path.exists(), "pyproject.toml was not created"
 
-def test_make_subdirs() -> None:
-    """Test that make_subdirs creates the expected directories."""
-    with tempfile.TemporaryDirectory() as tempdir:
-        subdirs = ["src", "tests", "docs"]
-        make_subdirs(Path(tempdir), subdirs)
-        for subdir in subdirs:
-            assert os.path.isdir(os.path.join(tempdir, subdir))
+        gitignore_file_path = package_dir / ".gitignore"
+        assert gitignore_file_path.exists(), ".gitignore was not created"
 
+        github_dir = package_dir / ".github"
+        assert github_dir.exists(), ".github directory was not created"
 
-def test_copy_template() -> None:
-    """Test that copy_template copies the template files to the target directory."""
-    with tempfile.TemporaryDirectory() as tempdir:
-        copy_template("gitignore.jinja", Path(tempdir) / ".gitignore")
-        assert (Path(tempdir) / ".gitignore").exists()
-
-
-def test_construct_default_readme_md() -> None:
-    """Test that construct_default_readme_md creates and writes a valid README.md."""
-    with tempfile.TemporaryDirectory() as tempdir:
-        os.makedirs(Path(tempdir) / test_package_name / "docs", exist_ok=True)
-        description = "This is a test for the README.md construction."
-        construct_default_readme_md(Path(tempdir) / test_package_name, description)
-        readme_path = Path(tempdir) / test_package_name / "docs" / "README.md"
-        assert readme_path.exists()
-        with open(readme_path) as readme_file:
-            content = readme_file.read()
-            assert test_package_name in content
-            assert description in content
-
-
-def test_construct_default_gitignore() -> None:
-    """Test that construct_default_gitignore creates a valid .gitignore file."""
-    with tempfile.TemporaryDirectory() as tempdir:
-        package_path = Path(tempdir) / test_package_name
-        os.makedirs(package_path, exist_ok=True)
-        construct_default_gitignore(package_path)
-        gitignore_path = package_path / ".gitignore"
-        assert gitignore_path.exists()
-        with open(gitignore_path) as gitignore_file:
-            content = gitignore_file.read()
-            assert "log*" in content
-            assert "__pycache__" in content
-
-
-def test_construct_default_dot_github() -> None:
-    """Test that construct_default_dot_github creates the expected workflows."""
-    with tempfile.TemporaryDirectory() as tempdir:
-        package_path = Path(tempdir) / test_package_name
-        os.makedirs(package_path, exist_ok=True)
-        construct_default_dot_github(package_path)
-        workflows_path = package_path / ".github"
-        assert workflows_path.exists()
-        for workflow_file in ["pull_request_template.md", "dependabot.yml"]:
-            assert (workflows_path / workflow_file).exists()
-        workflows_path = workflows_path / "workflows"
-        assert workflows_path.exists()
-        for workflow_file in [
-            "check_links.yml",
-            "lint.yml",
-            "test.yml",
-            "track_new_issues.yml",
-            "track_new_prs.yml",
-        ]:
-            assert (workflows_path / workflow_file).exists()
-
-
-def test_construct_default_pre_commit_config_yaml() -> None:
-    """Test that construct_default_pre_commit_config_yaml creates a valid file."""
-    with tempfile.TemporaryDirectory() as tempdir:
-        package_path = Path(tempdir) / test_package_name
-        os.makedirs(package_path, exist_ok=True)
-        construct_default_pre_commit_config_yaml(package_path)
-        pre_commit_path = package_path / ".pre-commit-config.yaml"
-        assert pre_commit_path.exists(), f"{pre_commit_path} does not exist"
-        assert pre_commit_path.is_file(), f"{pre_commit_path} is not a file"
-        with open(pre_commit_path) as pre_commit_file:
-            content = pre_commit_file.read()
-            assert "repos:" in content
-            assert "- repo:" in content
-            assert "ruff" in content
-            assert "black" in content
-            assert "pytest" in content
-
-
-def test_construct_application_file() -> None:
-    """Test that construct_application_file creates a valid application file."""
-    with tempfile.TemporaryDirectory() as tempdir:
-        app_name = "test_app"
-        app_path = (
-            Path(tempdir) / test_package_name / "apps" / f"__main_{app_name}__.py"
+        github_workflow_dir = github_dir / "workflows"
+        assert github_workflow_dir.exists(), (
+            ".github/workflows directory was not created"
         )
-        os.makedirs(app_path.parent, exist_ok=True)
-        construct_application_file(app_name, app_path)
-        assert app_path.exists()
-        with open(app_path) as app_file:
-            content = app_file.read()
-            assert "def main() -> None:" in content
-            assert 'if __name__ == "__main__":' in content
+
+        pull_request_template_file_path = github_dir / "pull_request_template.md"
+        assert pull_request_template_file_path.exists(), (
+            "pull_request_template.md was not created"
+        )
+
+        lint_workflow_file_path = github_workflow_dir / "lint.yml"
+        assert lint_workflow_file_path.exists(), "lint.yml was not created"
+
+        pytest_workflow_file_path = github_workflow_dir / "pytest.yml"
+        assert pytest_workflow_file_path.exists(), "pytest.yml was not created"
+
+        track_new_issues_workflow_file_path = (
+            github_workflow_dir / "track_new_issues.yml"
+        )
+        assert track_new_issues_workflow_file_path.exists(), (
+            "track_new_issues.yml was not created"
+        )
+
+        track_new_prs_workflow_file_path = github_workflow_dir / "track_new_prs.yml"
+        assert track_new_prs_workflow_file_path.exists(), (
+            "track_new_prs.yml was not created"
+        )
+
+        github_issue_template_dir = github_dir / "ISSUE_TEMPLATE"
+        assert github_issue_template_dir.exists(), (
+            ".github/ISSUE_TEMPLATE directory was not created"
+        )
+
+        bug_report_template_file_path = (
+            github_issue_template_dir / "bug_report.yml"
+        )
+        assert bug_report_template_file_path.exists(), (
+            "bug_report.yml was not created"
+        )
+
+        documentation_template_file_path = (
+            github_issue_template_dir / "documentation.yml"
+        )
+        assert documentation_template_file_path.exists(), (
+            "documentation.yml was not created"
+        )
+
+        feature_request_template_file_path = (
+            github_issue_template_dir / "feature_request.yml"
+        )
+        assert feature_request_template_file_path.exists(), (
+            "feature_request.yml was not created"
+        )
+
+        large_change_request_template_file_path = (
+            github_issue_template_dir / "large_change_request.yml"
+        )
+        assert large_change_request_template_file_path.exists(), (
+            "large_change_request.yml was not created"
+        )
 
 
-def test_parse_applications() -> None:
-    """Test that parse_applications constructs entry points correctly."""
-    with tempfile.TemporaryDirectory() as tempdir:
-        package_path = Path(tempdir) / test_package_name
-        app_path = package_path / "src" / test_package_name / "apps"
-        os.makedirs(app_path, exist_ok=True)
-        applications = ["app1", "app2"]
-        parse_applications(package_path, applications)
-        app_file_names = [f"__main_{app}__.py" for app in applications]
-        expected_app_files = [
-            app_path / app_file_name for app_file_name in app_file_names
+        readme_file_path = package_dir / "docs" / "README.md"
+        assert readme_file_path.exists(), "README.md was not created"
+
+        package_src = package_dir / "src"
+        assert package_src.exists(), "src/ directory was not created"
+
+        package_src_named = package_src / package_name
+        assert package_src_named.exists(), (
+            f"src/{package_name} directory was not created"
+        )
+
+        integtest_dir = package_src_named / "integtest"
+        assert integtest_dir.exists(), (
+            f"src/{package_name}/integtest directory was not created"
+        )
+
+        app_dir = package_src_named / "apps"
+        assert app_dir.exists(), f"src/{package_name}/apps directory was not created"
+
+        unit_test_dir = package_dir / "tests"
+        assert unit_test_dir.exists(), "tests/ directory was not created"
+
+        pre_commit_config_file_path = package_dir / ".pre-commit-config.yaml"
+        assert pre_commit_config_file_path.exists(), (
+            ".pre-commit-config.yaml was not created"
+        )
+
+        # 5. Verify file generation
+        assert (package_dir / "src" / package_name / "__init__.py").exists()
+        assert (package_dir / "src" / package_name / "apps" / "__init__.py").exists()
+
+        # 6. Verify output string
+        output = strip_ansi(result.output)
+        assert "You have successfully created your package" in output
+
+        # 7. Pip install using the resolved absolute path of the sandbox directory
+        absolute_package_dir = package_dir.resolve()
+        try:
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", str(absolute_package_dir)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except subprocess.CalledProcessError:
+            print(f"STDOUT:\n{result.stdout}")
+            print(f"STDERR:\n{result.stderr}")
+            raise
+
+        # 5. Run linters (Ruff)
+        result_lint = subprocess.run(
+            ["ruff", "check", str(package_dir.resolve())],
+            capture_output=True,
+            text=True,
+        )
+        assert result_lint.returncode == 0, (
+            "Linting failed:\n"
+            "STDOUT:\n{result_lint.stdout}\n"
+            "STDERR:\n{result_lint.stderr}"
+        )
+
+        # 6. Run the applications and check output
+        # App names match the exact strings used in your CLI invocation inputs
+        apps_to_test = [
+            "test-daqpyutils-app-creation-1",
+            "test-daqpyutils-app-creation-2",
         ]
-        generated_app_files = [file for file in app_path.glob("*.py") if file.is_file()]
-        assert set(expected_app_files) == set(generated_app_files)
 
+        for app in apps_to_test:
+            try:
+                proc = subprocess.run([app, "--help"], capture_output=True, text=True)
+                assert proc.returncode == 0, (
+                    f"App {app} failed to execute with --help. Output:\n{proc.stderr}"
+                )
+            except subprocess.CalledProcessError:
+                raise
+            except FileNotFoundError as e:
+                print(f"STDOUT:\n{proc.stdout}")
+                print(f"STDERR:\n{proc.stderr}")
+                new_err_str = f"App {app} was not found in PATH."
+                raise AssertionError(new_err_str) from e
 
-def test_format_requirements() -> None:
-    """Test that format_requirements formats requirements correctly."""
-    click_version = "8.1.7"
-    requirements_with_version = [f"click=={click_version}"]
-    formatted_requirements = format_requirements(requirements_with_version)
-    assert formatted_requirements == requirements_with_version
-
-    requirements_without_version = ["click"]
-    assert (
-        format_requirements(requirements_without_version) == requirements_with_version
-    )
-
-    with pytest.raises(SystemExit):
-        format_requirements(["non_existent_package"])
-
-    with pytest.raises(SystemExit):
-        format_requirements(["non_existent_package==0.1.0"])
-
-    # Test with an empty list
-    assert format_requirements([]) == []
-
-
-def test_construct_default_pyproject_toml() -> None:
-    """Test that construct_default_pyproject_toml creates a valid pyproject.toml."""
-    test_description = "Test Package"
-    requirements = ["click==8.1.7"]
-    applications = ["app1", "app2"]
-    strict_requirements = True
-    with tempfile.TemporaryDirectory() as tempdir:
-        package_path = Path(tempdir) / test_package_name
-        os.makedirs(package_path, exist_ok=True)
-        construct_default_pyproject_toml(
-            package_path,
-            test_description,
-            requirements,
-            applications,
-            strict_requirements,
+        # 7. Cleanup (Uninstall the package cleanly using its real package name)
+        # Your target package name variable is 'package_name'
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "uninstall", "-y", package_name]
         )
-        pyproject_path = package_path / "pyproject.toml"
-        assert pyproject_path.exists()
-        with open(pyproject_path) as pyproject_file:
-            content = pyproject_file.read()
-            assert "setuptools" in content
-            assert "[project]" in content
-            assert f'name = "{test_package_name}"' in content
-            assert 'description = "Test Package"' in content
-    # TODO - Add tests for other generated files

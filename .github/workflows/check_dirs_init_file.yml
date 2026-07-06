@@ -1,0 +1,33 @@
+# This workflow checks for __init__.py files in directories and subdirectories.
+# Directories missing __init__.py files are needed by mkddocstrings to generate
+# documentation from python docstrings
+name: Check for __init__.py files
+
+on: 
+  pull_request:
+
+jobs:
+  check-init:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Look for __init__ files
+        run: |
+          repo_name="${GITHUB_REPOSITORY##*/}"
+          target_dir="src/$repo_name"
+          
+          # Find directories, excluding __pycache__ and your integtest folder
+          missing=$(find "$target_dir" -type d \
+              -not -name "__pycache__" \
+              -not -path "*/integtest*" \
+              -exec sh -c '[ ! -e "$1/__init__.py" ] && echo "$1"' _ {} \;)
+  
+          if [ -n "$missing" ]; then
+              echo "The following directories are missing __init__.py:"
+              echo "$missing"
+              exit 1
+          else
+              echo "All required directories under $target_dir have __init__.py"
+          fi
