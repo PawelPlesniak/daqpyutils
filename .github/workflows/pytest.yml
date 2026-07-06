@@ -1,5 +1,4 @@
-# Run pytests with mypy, doctests, and coverage
-
+# Run pytests with mypy, doctests, and coverage inside DUNE Container
 name: Test, Type Check, and Coverage
 
 on: [push]
@@ -8,12 +7,22 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        python-version: ["3.12"]
+    defaults:
+      run:
+        shell: bash
+
+    # Natively run the entire job inside the DUNE DAQ container
+    container:
+      image: ghcr.io/dune-daq/nightly-release-alma9:development_v5
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Setup CVMFS
+        uses: cvmfs-contrib/github-action-cvmfs@v5
+        with:
+          cvmfs_repositories: 'dunedaq.opensciencegrid.org,dunedaq-development.opensciencegrid.org'
+
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up dev nightly
         if: ${{ !cancelled() }}
@@ -28,23 +37,29 @@ jobs:
           dbt-build
           dbt-workarea-env
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies
+      - name: Install package dependencies
+        if: success()
         run: |
+          # Source your environment first
+          cd nightly/NFD_DEV* || true
+          source env.sh
+          
+          # Navigate back to your root workspace folder and install package under test
+          cd $GITHUB_WORKSPACE
+          python -m pip install --upgrade pip
           pip install .[test]
 
       - name: Run tests, mypy, and generate coverage
+        if: success()
         run: |
+          cd nightly/NFD_DEV* || true
+          source env.sh
+          
+          cd $GITHUB_WORKSPACE
           pytest
 
       - name: Upload coverage to Codecov
-        if: matrix.python-version == '3.10'
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
-
