@@ -54,11 +54,12 @@ jobs:
           REPO_NAME="${{ github.event.repository.name }}"
           echo "Target branch: $BRANCH | Target repository: $REPO_NAME"
 
-          # 2. Source baseline DUNE toolchain variables
-          source /cvmfs/dunedaq.opensciencegrid.org/setup_dunedaq.sh
-          setup_dbt latest
+          # 2. Source nightly testing environment
+          echo "Setting up the nightly testing environment..."
+          cd nightly/NFD_DEV*
+          source env.sh
           
-          # 3. Enter the created nightly workspace
+          # 3. Enter the created nightly workspace 
           cd nightly/NFD_DEV*
           
           # 4. Move to the standard pythoncode directory location
@@ -71,15 +72,9 @@ jobs:
           else
               git clone "https://github.com/${{ github.repository }}.git" -b "$BRANCH" "$REPO_NAME"
           fi
-          
-          # 6. Step back to root workarea to compile everything securely
-          cd ../..
-          source env.sh
-          dbt-build
-          dbt-workarea-env
 
-          # 7. Navigate directly into the package directory to install dependencies and test
-          cd pythoncode/"$REPO_NAME"
+          # 6. Navigate directly into the package directory to install dependencies and test
+          cd $REPO_NAME
           python -m pip install --upgrade pip
           pip install .[test]
 
