@@ -16,14 +16,6 @@ jobs:
       image: ghcr.io/dune-daq/nightly-release-alma9:development_v5
 
     steps:
-      - name: Setup CVMFS
-        uses: cvmfs-contrib/github-action-cvmfs@v5
-        with:
-          cvmfs_repositories: 'dunedaq.opensciencegrid.org,dunedaq-development.opensciencegrid.org'
-
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Set up dev nightly
         if: ${{ !cancelled() }}
         run: |
