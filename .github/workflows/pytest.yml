@@ -1,7 +1,23 @@
 # Run pytests with mypy, doctests, and coverage inside DUNE Container (Agnostic Template)
 name: Test, Type Check, and Coverage
 
-on: [push, pull_request]
+on:
+  # Run on any pushes to the main branch which releases are generated from
+  push:
+    branches:
+      - develop
+      - 'prep-release/**'
+
+  # Run on any pull requests targeting the main branch which releases are generated from
+  pull_request:
+    branches:
+      - develop
+      - 'prep-release/**'
+
+# Cancel any running jobs for this same branch if a new commit is pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -30,37 +46,44 @@ jobs:
           dbt-create -n last_fddaq
 
       # 3. Handle variables, completely agnostic clone, and test execution
-      - name: Setup Python environment, install package, and run tests
+      - name: Setup Python environment, clone package, build workarea, and run tests
         if: success()
         run: |
-          # 1. Dynamically extract the repository name
-          REPO_NAME="${{ github.event.repository.name }}"
-          echo "Target repository name resolved to: $REPO_NAME"
-
-          # 2. Resolve active branch name cleanly across push and PR events
+          # 1. Resolve active branch and repository name metadata
           BRANCH="${{ github.head_ref || github.ref_name }}"
-          echo "Target testing branch resolved to: $BRANCH
+          REPO_NAME="${{ github.event.repository.name }}"
+          echo "Target branch: $BRANCH | Target repository: $REPO_NAME"
 
-          # 3. Source your DUNE workarea environment
-          cd nightly/NFD_DEV*
-          source env.sh
+          # 2. Source baseline DUNE toolchain variables
+          source /cvmfs/dunedaq.opensciencegrid.org/setup_dunedaq.sh
+          setup_dbt latest
           
-          # 4. Move to the pythoncode path
+          # 3. Enter the created nightly workspace
+          cd nightly/NFD_DEV*
+          
+          # 4. Move to the standard pythoncode directory location
           cd pythoncode
           
-          # 5. Clone this repository into a target directory
+          # 5. Clone the relevant repo
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-              git clone "https://github.com/${{ github.event.pull_request.head.repo.full_name }}.git" -b "$BRANCH" target_repo || \
-              git clone "https://github.com/${{ github.repository }}.git" -b "$BRANCH" target_repo
+              git clone "https://github.com/${{ github.event.pull_request.head.repo.full_name }}.git" -b "$BRANCH" "$REPO_NAME" || \
+              git clone "https://github.com/${{ github.repository }}.git" -b "$BRANCH" "$REPO_NAME"
           else
-              git clone "https://github.com/${{ github.repository }}.git" -b "$BRANCH" target_repo
+              git clone "https://github.com/${{ github.repository }}.git" -b "$BRANCH" "$REPO_NAME"
           fi
           
-          cd target_repo
+          # 6. Step back to root workarea to compile everything securely
+          cd ../..
+          source env.sh
+          dbt-build
+          dbt-workarea-env
+
+          # 7. Navigate directly into the package directory to install dependencies and test
+          cd pythoncode/"$REPO_NAME"
           python -m pip install --upgrade pip
           pip install .[test]
 
-          # 6. Execute tests
+          # 8. Execute testing engine
           pytest --junitxml=junit/test-results.xml --cov=. --cov-report=xml --cov-report=html
           echo "TARGET_DIR=$(pwd)" >> $GITHUB_ENV
 
