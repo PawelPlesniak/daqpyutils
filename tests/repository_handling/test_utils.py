@@ -70,6 +70,7 @@ def test_item_is_package_name() -> None:
     assert item_is_package_name("daq_py_utils") is True
     # Invalid package names
     assert item_is_package_name("daqpyutils=1..0") is False
+    assert item_is_package_name("fake_package_name!") is False
 
 
 def test_validate_item_format_against_type() -> None:
@@ -171,7 +172,7 @@ def test_unpack_items() -> None:
 
     # Test ingesting a requirements file with invalid formats
     with tempfile.NamedTemporaryFile(delete=True) as temp_file:
-        temp_file.write(b"daqpyutils==1.0.0\ninvalid_format\n")
+        temp_file.write(b"daqpyutils==1.0.0\ninvalid_&package\n")
         temp_file.seek(0)
         temp_file_path = temp_file.name
         with pytest.raises(SystemExit):
