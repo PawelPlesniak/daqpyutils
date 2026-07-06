@@ -468,7 +468,6 @@ def construct_default_gitignore(package_path: Path) -> None:
 
 def construct_default_dot_github(package_path: Path) -> None:
     """Construct the default .github/workflows/*.yml with the default CI workflows."""
-
     # Setup the default path
     template_dot_github_dir = template_path / "github"
 
@@ -497,7 +496,9 @@ def construct_default_dot_github(package_path: Path) -> None:
         copy_template(file, destination / file.name)
 
     # Copy the pull request template files to the destination
-    template_pull_request_template_path = template_dot_github_dir / "pull_request_template.md"
+    template_pull_request_template_path = (
+        template_dot_github_dir / "pull_request_template.md"
+    )
     destination = package_path / ".github" / "pull_request_template.md"
     copy_template(template_pull_request_template_path, destination)
 

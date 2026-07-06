@@ -157,7 +157,7 @@ def test_create_a_package_and_validate(tmp_path: Path) -> None:
         bug_report_template_file_path = (
             github_issue_template_dir / "bug_report.yml"
         )
-        assert track_new_issues_workflow_file_path.exists(), (
+        assert bug_report_template_file_path.exists(), (
             "bug_report.yml was not created"
         )
 
