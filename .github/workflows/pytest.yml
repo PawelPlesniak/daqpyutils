@@ -58,27 +58,34 @@ jobs:
           echo "Setting up the nightly testing environment..."
           cd nightly/NFD_DEV*
           source env.sh
+          echo "Entered nightly environment: $(pwd)"
           
-          # 3. Enter the created nightly workspace 
-          cd nightly/NFD_DEV*
-          
-          # 4. Move to the standard pythoncode directory location
+          # 3. Move to the standard pythoncode directory location
+          echo "Entering the pythoncode directory..."
           cd pythoncode
+          echo "Entered pythoncode directory: $(pwd)"
           
           # 5. Clone the relevant repo
+          echo "Cloning the repository $REPO_NAME ..."
           if [ "${{ github.event_name }}" = "pull_request" ]; then
               git clone "https://github.com/${{ github.event.pull_request.head.repo.full_name }}.git" -b "$BRANCH" "$REPO_NAME" || \
               git clone "https://github.com/${{ github.repository }}.git" -b "$BRANCH" "$REPO_NAME"
           else
               git clone "https://github.com/${{ github.repository }}.git" -b "$BRANCH" "$REPO_NAME"
           fi
+          echo "Repository cloned: $(pwd)/$REPO_NAME"
 
           # 6. Navigate directly into the package directory to install dependencies and test
+          echo "Navigating into the package directory..."
           cd $REPO_NAME
+          echo "Current directory: $(pwd)"
+          echo "Installing package in testing mode"
           python -m pip install --upgrade pip
           pip install .[test]
+          echo "Package $REPO_NAME installed in testing mode"
 
           # 8. Execute testing engine
+          echo "Running tests with coverage..."
           pytest --junitxml=junit/test-results.xml --cov=. --cov-report=xml --cov-report=html
           echo "TARGET_DIR=$(pwd)" >> $GITHUB_ENV
 
