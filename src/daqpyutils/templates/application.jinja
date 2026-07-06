@@ -8,7 +8,10 @@ def main() -> None:
     Show a log record so the developer can see where to put their entry point.
     The following lines should be populated by the developer.
     """
-    log = get_daq_logger(logger_name="{{ APPLICATION }}", rich_handler=True)
+    log = get_daq_logger(
+        logger_name="{{ APPLICATION }}",
+        rich_handler=True
+    )
     log.setLevel("INFO")
     log.info("Here is the entry point of {{ APPLICATION }}")
     return

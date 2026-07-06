@@ -521,7 +521,7 @@ def parse_applications(package_path: Path, applications: list[str]) -> str:
     package_name = package_path.name
     template_entry_points = ""
     for application in applications:
-        application_path = f"{package_name}/apps/{application}"
+        application_path = f"{package_name}/apps/{application.replace('-', '_')}"
         construct_application_file(
             application, package_path / "src" / (application_path + ".py")
         )

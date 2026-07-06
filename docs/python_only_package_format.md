@@ -163,6 +163,7 @@ Ignore rules:
  - `D100` - Documentation existence - Every package needs a summary at the top of the module/file.
  - `D104` - Documentation formatting - Separate the summary from details.
  - `D212` - Documentation formatting - Docstring starts on the same line as `"""`.
+ - `N999` - Naming linting - Package name follows PEP-8 compliance. The organization uses a different standard, mostly defined by Spack restrictions.
 
 Select rules:
  - `D213` - Documentatino formatting - Docstring starts on new line after `"""`.

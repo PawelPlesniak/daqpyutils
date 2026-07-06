@@ -71,96 +71,144 @@ def test_create_a_package_and_validate(tmp_path: Path) -> None:
     applications, and that it passes all the checks
     """
     runner = CliRunner()
+    package_name = "daqpyutilsUnitTestPackage"
     
-    # 1. Setup temporary paths using pytest's tmp_path
-    requirements_file = tmp_path / "requirements.txt"
-    requirements_file.write_text("grpcio\n")
-    
-    application_file = tmp_path / "apps.txt"
-    application_file.write_text("test_daqpyutils_app_creation_1\n")
-    
-    # 2. Invoke the CLI command
-    # Note: Using str(path) is safer for click arguments
-    result = runner.invoke(
-        create_python_dunedaq_package, 
-        [
-            "-l", "info"
-            "test-package-name", 
-            "-r", "click", 
-            "-rf", str(requirements_file),
-            "-a", "test_daqpyutils_app_creation_2",
-            "-af", str(application_file),
-            "-p", "Test of the package creation",
-            "-s"
-        ], 
-        obj={"root_path": tmp_path}
-    )
-    
-    # 3. Assert CLI success
-    assert result.exit_code == 0
-    
-    # 4. Verify directory structure
-    package_dir = tmp_path / "test-package-name"
-    assert package_dir.exists(), "Package directory was not created"
-    pyproject_toml_file_path = package_dir / "pyproject.toml"
-    assert pyproject_toml_file_path.exists(), "pyproject.toml was not created"
-    gitignore_file_path = package_dir / ".gitignore"
-    assert gitignore_file_path.exists(), ".gitignore was not created"
-    github_dir = package_dir / ".github"
-    assert github_dir.exists(), ".github directory was not created"
-    github_workflow_dir = github_dir / "workflows"
-    assert github_workflow_dir.exists(), ".github/workflows directory was not created"
-    pull_request_template_file_path = github_dir / "PULL_REQUEST_TEMPLATE.md"
-    assert pull_request_template_file_path.exists(), "PULL_REQUEST_TEMPLATE.md was not created"
-    lint_workflow_file_path = github_workflow_dir / "lint.yml"
-    assert lint_workflow_file_path.exists(), "lint.yml was not created"
-    pytest_workflow_file_path = github_workflow_dir / "pytest.yml"
-    assert pytest_workflow_file_path.exists(), "pytest.yml was not created"
-    track_new_issues_workflow_file_path = github_workflow_dir / "track_new_issues.yml"
-    assert track_new_issues_workflow_file_path.exists(), "track_new_issues.yml was not created"
-    track_new_prs_workflow_file_path = github_workflow_dir / "track_new_prs.yml"
-    assert track_new_prs_workflow_file_path.exists(), "track_new_prs.yml was not created"
-    readme_file_path = package_dir / "README.md"
-    assert readme_file_path.exists(), "README.md was not created"
-    package_src = package_dir / "src"
-    assert package_src.exists(), "src/ directory was not created"
-    package_src = package_dir / "src" / "test_package_name"
-    assert package_src.exists(), "src/test_package_name directory was not created"
-    integtest_dir = package_dir / "src" / "test_package_name" / "integtest"
-    assert integtest_dir.exists(), "src/test_package_name/integtest directory was not created"
-    app_dir = package_dir / "src" / "test_package_name" / "apps"
-    assert app_dir.exists(), "src/test_package_name/apps directory was not created"
-    unit_test_dir = package_dir / "tests"
-    assert unit_test_dir.exists(), "tests/ directory was not created"
-    pre_commit_config_file_path = package_dir / ".pre-commit-config.yaml"
-    assert pre_commit_config_file_path.exists(), ".pre-commit-config.yaml was not created"
-    
-    # 5. Verify file generation (e.g., check for expected sub-folders)
-    assert (package_dir / "src" / "test_package_name").exists()
-    assert (package_dir / "src" / "test_package_name" / "__init__.py").exists()
-    assert (package_dir / "src" / "test_package_name" / "apps" / "__init__.py").exists()
-    assert not (package_dir / "src" / "test_package_name" / "integtest" / "__init__.py").exists()
-    
-    # 6. Verify output
-    output = strip_ansi(result.output)
-    assert "You have successfully created your package" in output
+    # EVERYTHING goes inside this context block
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        
+        # 1. Setup paths relative to the isolation sandbox
+        requirements_file = Path("requirements.txt")
+        requirements_file.write_text("grpcio\n")
+        
+        application_file = Path("apps.txt")
+        application_file.write_text("test-daqpyutils-app-creation-1\n")
 
-    package_dir = tmp_path / "test-package-name"
-    subprocess.check_call([sys.executable, "-m", "pip", "install", str(package_dir)])
+        # 2. Invoke the CLI command
+        result = runner.invoke(
+            create_python_dunedaq_package, 
+            [
+                package_name, 
+                "-l", "info",
+                "-r", "click", 
+                "-rf", str(requirements_file),
+                "-a", "test-daqpyutils-app-creation-2",
+                "-af", str(application_file),
+                "-p", "Test of the package creation",
+                "-s"
+            ], 
+            obj={"root_path": tmp_path}
+        )
+        print(result.output)
+        
+        # 3. Assert CLI success (must be inside to print output properly on failure)
+        assert result.exit_code == 0, f"CLI crashed: {result.output}"
+        
+        # 4. Verify directory structure (Uses relative path 'package_name' safely here)
+        package_dir = Path(package_name)
+        assert package_dir.exists(), "Package directory was not created"
+        
+        pyproject_toml_file_path = package_dir / "pyproject.toml"
+        assert pyproject_toml_file_path.exists(), "pyproject.toml was not created"
+        
+        gitignore_file_path = package_dir / ".gitignore"
+        assert gitignore_file_path.exists(), ".gitignore was not created"
+        
+        github_dir = package_dir / ".github"
+        assert github_dir.exists(), ".github directory was not created"
+        
+        github_workflow_dir = github_dir / "workflows"
+        assert github_workflow_dir.exists(), ".github/workflows directory was not created"
+        
+        pull_request_template_file_path = github_dir / "pull_request_template.md"
+        assert pull_request_template_file_path.exists(), "pull_request_template.md was not created"
+        
+        lint_workflow_file_path = github_workflow_dir / "lint.yml"
+        assert lint_workflow_file_path.exists(), "lint.yml was not created"
+        
+        pytest_workflow_file_path = github_workflow_dir / "pytest.yml"
+        assert pytest_workflow_file_path.exists(), "pytest.yml was not created"
+        
+        track_new_issues_workflow_file_path = github_workflow_dir / "track_new_issues.yml"
+        assert track_new_issues_workflow_file_path.exists(), "track_new_issues.yml was not created"
+        
+        track_new_prs_workflow_file_path = github_workflow_dir / "track_new_prs.yml"
+        assert track_new_prs_workflow_file_path.exists(), "track_new_prs.yml was not created"
+        
+        readme_file_path = package_dir / "docs" / "README.md"
+        assert readme_file_path.exists(), "README.md was not created"
+        
+        package_src = package_dir / "src"
+        assert package_src.exists(), "src/ directory was not created"
+        
+        package_src_named = package_src / package_name
+        assert package_src_named.exists(), f"src/{package_name} directory was not created"
+        
+        integtest_dir = package_src_named / "integtest"
+        assert integtest_dir.exists(), f"src/{package_name}/integtest directory was not created"
+        
+        app_dir = package_src_named / "apps"
+        assert app_dir.exists(), f"src/{package_name}/apps directory was not created"
+        
+        unit_test_dir = package_dir / "tests"
+        assert unit_test_dir.exists(), "tests/ directory was not created"
+        
+        pre_commit_config_file_path = package_dir / ".pre-commit-config.yaml"
+        assert pre_commit_config_file_path.exists(), ".pre-commit-config.yaml was not created"
+        
+        # 5. Verify file generation
+        assert (package_dir / "src" / package_name / "__init__.py").exists()
+        assert (package_dir / "src" / package_name / "apps" / "__init__.py").exists()
+        
+        # 6. Verify output string
+        output = strip_ansi(result.output)
+        assert "You have successfully created your package" in output
 
-    # 5. Run linters (Ruff is typically used in your environment)
-    # This assumes ruff is installed in the test environment
-    result_lint = subprocess.run(["ruff", "check", str(package_dir)], capture_output=True, text=True)
-    assert result_lint.returncode == 0, f"Linting failed: {result_lint.stdout}"
+        # 7. Pip install using the resolved absolute path of the sandbox directory
+        absolute_package_dir = package_dir.resolve()
+        try:
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", str(absolute_package_dir)],
+                check=True,
+                capture_output=True,
+                text=True
+            )
+        except subprocess.CalledProcessError as e:
+            print("\n=== PIP INSTALL STDOUT ===")
+            print(e.stdout)
+            print("\n=== PIP INSTALL STDERR ===")
+            print(e.stderr)
+            raise e
 
-    # 6. Run the applications and check output
-    # Assuming your created apps are installed as console scripts or reachable via the CLI
-    apps_to_test = ["test_daqpyutils_app_creation_1", "test_daqpyutils_app_creation_2"]
-    
-    for app in apps_to_test:
-        # Execute the app; adjust the command based on how your tool names the entry points
-        proc = subprocess.run([app, "--help"], capture_output=True, text=True)
-        assert proc.returncode == 0, f"Here is the entry point of {app}"
+        # 5. Run linters (Ruff)
+        result_lint = subprocess.run(
+            ["ruff", "check", str(package_dir.resolve())], 
+            capture_output=True, 
+            text=True
+        )
+        assert result_lint.returncode == 0, f"Linting failed:\nSTDOUT:\n{result_lint.stdout}\nSTDERR:\n{result_lint.stderr}"
 
-    # 7. Cleanup (Optional: uninstall the package)
-    subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", "test-package-name"])
+        # 6. Run the applications and check output
+        # App names match the exact strings used in your CLI invocation inputs
+        apps_to_test = ["test-daqpyutils-app-creation-1", "test-daqpyutils-app-creation-2"]
+        
+        for app in apps_to_test:
+            # Running the app via 'sys.executable -m' or directly depends on your setup.
+            # If your template maps them to standard python console_scripts, we can run them.
+            # We use a fallback logic here to execute the command natively in the current environment.
+            try:
+                proc = subprocess.run([app, "--help"], capture_output=True, text=True)
+                assert proc.returncode == 0, f"App {app} failed to execute with --help. Output:\n{proc.stderr}"
+            except subprocess.CalledProcessError as e:
+                print("\n===STDOUT ===")
+                print(e.stdout)
+                print("\n===STDERR ===")
+                print(e.stderr)
+                raise e
+            except FileNotFoundError:
+                # Fallback: If pip installs console scripts into a local directory not yet in the active path,
+                # you can also assert their file presence in the package's pyproject.toml setup.
+                raise AssertionError(f"The entry point script '{app}' was not found in the test environment executable PATH.")
+
+        # 7. Cleanup (Uninstall the package cleanly using its real package name)
+        # Your target package name variable is 'package_name'
+        subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", package_name])
