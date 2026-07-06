@@ -15,6 +15,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up dev nightly
+        if: ${{ !cancelled() }}
+        run: |
+          mkdir nightly
+          cd nightly
+          source /cvmfs/dunedaq.opensciencegrid.org/setup_dunedaq.sh
+          setup_dbt latest_v5
+          dbt-create -n last_fddaq
+          cd NFD_DEV*
+          source env.sh
+          dbt-build
+          dbt-workarea-env
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -22,7 +35,6 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
           pip install .[test]
 
       - name: Run tests, mypy, and generate coverage
