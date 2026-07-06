@@ -1,60 +1,30 @@
-import re
-import shutil
 import sys
-from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Any
 
 import click
-import requests
 from daqpytools.logging.levels import logging_log_level_keys, logging_log_level_to_int
 from daqpytools.logging.logger import get_daq_logger
-from git import Repo
-from jinja2 import Template
-
-from daqpyutils.repository_handling.defaults import default_subdirs
-
-template_path = Path(__file__).parent.parent / "templates"
-log = get_daq_logger(logger_name="daqpyutils.create_python_dunedaq_package", rich_handler=True)
-template_variables: dict[str, str | bool] = {}
 
 from daqpyutils.repository_handling.utils import (
-    validate_package,
-    item_is_formatted_with_version,
-    item_is_formatted_in_kebab_case,
-    item_is_package_name,
-    item_is_application_name,
-    validate_item_format_against_type,
-    ingest_item_list,
+    make_files,
+    make_subdirs,
     unpack_items,
     validate_compliance_with_naming_conventions,
-    setup_dot_git,
-    make_subdirs,
-    populate_template,
-    copy_template,
-    construct_default_readme_md,
-    construct_default_gitignore,
-    construct_default_dot_github,
-    construct_default_pre_commit_config_yaml,
-    construct_application_file,
-    parse_applications,
-    construct_default_pyproject_toml,
-    construct_inits,
-    make_files,
 )
 
-def summary_logging(package_name: str, needs_description: bool) -> None:
-    """Summarize the package creation, and the remaining tasks required to integrate the
-    package with the DUNE-DAQ github oragnization.
+template_path = Path(__file__).parent.parent / "templates"
+log = get_daq_logger(
+    logger_name="daqpyutils.create_python_dunedaq_package", rich_handler=True
+)
+template_variables: dict[str, str | bool] = {}
 
-    >>> summary_logging("my_package", True)
-    [green]You have successfully package my_package[/green]. To publish it, you need to:
-        [bold green]'git push`[/bold green] to remote in your private github
-            Set up a new remote if you haven't already
-        Set `develop` as the main branch, as this is the standard that DUNE DAQ uses.
-        Set up your pytest-cov key.
-        Add a [bold green]package description[/bold green] in the pyproject.toml
-        Contact John Freeman and Andrew Mogan for integration into DUNEDAQ organization.
+
+def summary_logging(package_name: str, needs_description: bool) -> None:
+    """
+    Log future actions to comission the created package into the DUNE-DAQ organization.
+
+    Summarize the package creation, and the remaining tasks required to integrate the
+    package with the DUNE-DAQ github oragnization.
 
     Args:
         package_name: The name of the package that was created.

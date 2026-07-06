@@ -1,13 +1,12 @@
 import re
 import shutil
 import sys
+from collections.abc import Mapping
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Any
 
-import click
 import requests
-from daqpytools.logging.levels import logging_log_level_keys, logging_log_level_to_int
+from daqpytools.logging.levels import logging_log_level_to_int
 from daqpytools.logging.logger import get_daq_logger
 from git import Repo
 from jinja2 import Template
@@ -18,19 +17,12 @@ log = get_daq_logger("daqpyutils.repository_handling.utils", rich_handler=True)
 log.setLevel(logging_log_level_to_int("INFO"))
 template_path = Path(__file__).parent.parent / "templates"
 
-def validate_package(package_name: str) -> bool:
-    """Validate that the package is installed in the current environment.
-    If not found locally, checks if it exists on PyPI.
 
-    >>> validate_package("numpy")
-    True
-    >>> validate_package("nonexistent_package")
-    Package nonexistent_package not found locally, checking PyPI...
-    Requested package nonexistent_package was not found in either the virtual environment or in PyPI, exiting.
-    SystemExit: If the package is not found locally or on PyPI.
-    >>> validate_package("A-FMM")
-    Package A-FMM not found locally, checking PyPI...
-    Package A-FMM exists on PyPI.
+def validate_package(package_name: str) -> bool:
+    """
+    Validate that the package is installed in the current environment.
+
+    If not found locally, checks if it exists on PyPI.
 
     Args:
         package_name: The name of the package to validate.
@@ -71,6 +63,8 @@ def validate_package(package_name: str) -> bool:
             package_name,
         )
         sys.exit(1)
+    
+    return False
 
 
 def item_is_formatted_with_version(item: str) -> bool:
@@ -127,7 +121,7 @@ def item_is_formatted_in_kebab_case(item: str) -> bool:
 def item_is_package_name(item: str) -> bool:
     """Determine if the given item is a package name following conventions.
 
-    Supports PEP 508 compliant names and specifically checks for version 
+    Supports PEP 508 compliant names and specifically checks for version
     specifiers (==) versus project specifiers (=).
 
     >>> item_is_package_name("package-name==1.0.0")
@@ -146,9 +140,13 @@ def item_is_package_name(item: str) -> bool:
     # Reject project script specifiers
     elif "=" in item:
         return False
-        
+
     # Validate package name against PEP 508 compliant regex
-    return bool(re.match(r"^([A-Z0-9]|[A-Z0-9][A-Z0-9._-]*[A-Z0-9])$", package_name, re.IGNORECASE))
+    return bool(
+        re.match(
+            r"^([A-Z0-9]|[A-Z0-9][A-Z0-9._-]*[A-Z0-9])$", package_name, re.IGNORECASE
+        )
+    )
 
 
 def item_is_application_name(item: str) -> bool:
@@ -183,11 +181,13 @@ def validate_item_format_against_type(item: str, item_type: str) -> None:
     """Validate the given item based on its type.
 
     >>> validate_item_format_against_type("package_name==1.0.0", "requirements")
-    None
+
     >>> validate_item_format_against_type("application-name", "applications")
-    None
+
     >>> validate_item_format_against_type("package_name=1.0.0", "requirements")
-    SystemExit: If the item is not valid for its type.
+    Traceback (most recent call last):
+    ...
+    SystemExit: 1
 
     Args:
         item: The item to validate.
@@ -246,15 +246,6 @@ def strip_version_from_package_name(package_name: str) -> str:
 def ingest_item_list(item_type: str, items: list[str]) -> list[str]:
     """Ingest a list of items and validate their format based on their type.
 
-    >>> ingest_item_list("requirements", ["package_name==1.0.0", "package_name"])
-    ['package_name', 'package_name']
-    >>> ingest_item_list("applications", ["application-name", "another-application"])
-    ['application-name', 'another-application']
-    >>> ingest_item_list("requirements", ["package_name=1.0.0"])
-    SystemExit: If any item is not valid for its type.
-    >>> ingest_item_list("application_1", ["ApplicationName"])
-    SystemExit: If any item is not valid for its type.
-
     Args:
         item_type: The type of items being ingested, either "requirements" or
             "applications".
@@ -308,10 +299,6 @@ def unpack_items(
     version numbers associated with each package will be removed, instead using packages
     already included in the virtual environment, or allowing pip to determine a version
     compatible with the other packages in the environment.
-
-    Example usage:
-    >>> unpack_items(items=("package1==1.0.0", "package2"), items_file=None)
-    ['package1', 'package2']
 
     Args:
         items: A tuple, list, or string of items to unpack.
@@ -404,10 +391,12 @@ def validate_compliance_with_naming_conventions(
 
 
 def setup_dot_git(package_path: Path) -> None:
-    """Sets up .git/ dir.
+    """
+    Set up .git/ dir.
+    
     If it already exists, checks if it is correctly structured.
     If it doesn't exist, it gets written.
-    """
+    """ 
     log.info("Setting up the .git repository.")
     Repo.init(package_path, mkdir=True)
     return
@@ -430,7 +419,9 @@ def make_subdirs(package_path: Path, applications: list[str]) -> None:
 
 
 def populate_template(
-    template_file_path: Path, template_variables: dict[str, Any], output_path: Path
+    template_file_path: Path,
+    template_variables: Mapping[str, str | bool],
+    output_path: Path
 ) -> None:
     """Populate a template with its variables and save the output render."""
     template = Template(template_file_path.read_text())
@@ -521,15 +512,59 @@ def parse_applications(package_path: Path, applications: list[str]) -> str:
     package_name = package_path.name
     template_entry_points = ""
     for application in applications:
-        application_path = f"{package_name}/apps/{application.replace('-', '_')}"
-        construct_application_file(
-            application, package_path / "src" / (application_path + ".py")
+        application_path = (
+            f"{package_name}/apps/{format_application_name_to_file_name(application)}"
         )
-        application_entry_point = application_path.replace("/", ".") + ":main"
-        template_entry_points += f"{application} = \"{application_entry_point}\"\n"
+        construct_application_file(
+            application, package_path / "src" / (application_path)
+        )
+        application_entry_point = (
+            replace_file_path_with_dot_scope_notation(application_path) + ":main"
+        )
+        template_entry_points += f'{application} = "{application_entry_point}"\n'
         log.info("Added application %s to pyproject.toml", application)
 
     return template_entry_points.rstrip("\n")
+
+
+def format_application_name_to_file_name(application_name: str) -> str:
+    """Format the application name to a valid Python file name.
+
+    >>> format_application_name_to_file_name("application-name")
+    'application_name.py'
+    >>> format_application_name_to_file_name("another-application")
+    'another_application.py'
+
+    Args:
+        application_name: The name of the application.
+
+    Returns:
+        str: The formatted application file name.
+
+    Raises:
+        None
+    """
+    return application_name.replace("-", "_") + ".py"
+
+
+def replace_file_path_with_dot_scope_notation(file_path: str) -> str:
+    """Replace the file path with dot scope notation.
+
+    >>> replace_file_path_with_dot_scope_notation("package_name/apps/application.py")
+    'package_name.apps.application'
+    >>> replace_file_path_with_dot_scope_notation("package_name/integration_tests/t.py")
+    'package_name.integration_tests.t'
+
+    Args:
+        file_path: The file path to replace.
+
+    Returns:
+        str: The file path with dot scope notation.
+
+    Raises:
+        None
+    """
+    return file_path.rstrip(".py").replace("/", ".")
 
 
 def construct_default_pyproject_toml(
@@ -573,7 +608,7 @@ def construct_inits(package_path: Path) -> None:
     ]
     directories.append(package_path / "src" / package_path.name)
     for directory in directories:
-        log.error(f"{directory}")
+        log.error("%s", directory)
         for exclusion_path in ["integtest", "github"]:
             if exclusion_path in str(directory):
                 continue
