@@ -20,7 +20,6 @@ In order to simplify the installation and maintenance approach of the python-onl
 │       ├── apps/
 │       │   └── __init__.py (empty)
 │       ├── integtest/
-│       └── __init__.py (empty)
 ├── tests/
 ├── .gitignore
 ├── .pre_commit_config.yml
