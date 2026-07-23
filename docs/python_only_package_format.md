@@ -5,11 +5,11 @@ In order to simplify the installation and maintenance approach of the python-onl
 ├── .git/
 │   └── standard git directory structure
 ├── .github/
-│   └── ISSUE_TEMPLATE/
+│   ├── ISSUE_TEMPLATE/
 │   └── workflows/
-│       └── lint.yml
-│       └── pytest.yml
-│       └── track_new_issues.yml
+│       ├── lint.yml
+│       ├── pytest.yml
+│       ├── track_new_issues.yml
 │       └── track_new_prs.yml
 │   └── pull_request_template.md
 ├── docs
@@ -19,7 +19,7 @@ In order to simplify the installation and maintenance approach of the python-onl
 │   └── <package_name>/
 │       ├── apps/
 │       │   └── __init__.py (empty)
-│       ├── integtest/
+│       └── integtest/
 ├── tests/
 ├── .gitignore
 ├── .pre_commit_config.yml
